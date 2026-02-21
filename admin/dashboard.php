@@ -6,21 +6,28 @@ if(!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     exit();
 }
 
+// Delete logic
+if(isset($_GET['delete'])) {
+    $id = $_GET['delete'];
+    $conn->query("DELETE FROM books WHERE id=$id");
+    header("Location: dashboard.php");
+    exit();
+}
+
 // Fetch books
-$books = $conn->query("SELECT * FROM books ORDER BY id DESC");
+$books = $conn->query("SELECT * FROM books ORDER BY id");
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Library Management System</title>
 
 <style>
 body {
     margin: 0;
-    font-family: Arial, sans-serif;
+    font-family: Arial;
     background-color: #f5f6fa;
 }
 
@@ -81,13 +88,39 @@ table {
 }
 
 table th, table td {
-    padding: 10px;
+    padding: 8px;
     border: 1px solid #ddd;
     text-align: left;
+    font-size: 14px;
 }
 
 table th {
     background-color: #f1f1f1;
+}
+
+.action-btn {
+    padding:4px 8px;
+    font-size:12px;
+    text-decoration:none;
+    border-radius:4px;
+    color:white;
+    margin-right:5px;
+}
+
+.edit-btn {
+    background-color:#f39c12;
+}
+
+.edit-btn:hover {
+    background-color:#d68910;
+}
+
+.delete-btn {
+    background-color:#e74c3c;
+}
+
+.delete-btn:hover {
+    background-color:#c0392b;
 }
 </style>
 </head>
@@ -95,13 +128,14 @@ table th {
 <body>
 
 <div class="header">
-    Library Management System
+    Trisha Vidya College Of Commerce & Management
 </div>
 
 <div class="sidebar">
     <a href="dashboard.php">Dashboard</a>
     <a href="add_book.php">Books</a>
     <a href="issue_book.php">Issue Books</a>
+    <a href="issued_book.php">Issued Books</a>
     <a href="../logout.php">Logout</a>
 </div>
 
@@ -123,9 +157,10 @@ table th {
                 <th>Publisher</th>
                 <th>Edition</th>
                 <th>Price</th>
-                <th>Total Copies</th>
+                <th>Total</th>
                 <th>Quantity</th>
-                <th>Date Added</th>
+                <th>Date</th>
+                <th style="width:120px;">Action</th>
             </tr>
         </thead>
         <tbody>
@@ -144,10 +179,18 @@ table th {
                         <td>{$row['total_copies']}</td>
                         <td>{$row['quantity']}</td>
                         <td>{$row['date_of_accession']}</td>
+                        <td>
+                            <a href='edit_book.php?id={$row['id']}' class='action-btn edit-btn'>Edit</a>
+                            <a href='dashboard.php?delete={$row['id']}' 
+                               class='action-btn delete-btn'
+                               onclick=\"return confirm('Are you sure you want to delete this book?')\">
+                               Delete
+                            </a>
+                        </td>
                       </tr>";
             }
         } else {
-            echo "<tr><td colspan='10'>No books found</td></tr>";
+            echo "<tr><td colspan='11'>No books found</td></tr>";
         }
         ?>
 

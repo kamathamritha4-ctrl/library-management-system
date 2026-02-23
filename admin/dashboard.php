@@ -1,202 +1,207 @@
 <?php
-include("../config/config.php");
+include_once("../config/config.php");
 
 if(!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
-    header("Location: /Library_Management_Project/index.php");
+    header("Location: ../index.php");
     exit();
 }
 
-// Delete logic
-if(isset($_GET['delete'])) {
-    $id = $_GET['delete'];
-    $conn->query("DELETE FROM books WHERE id=$id");
-    header("Location: dashboard.php");
-    exit();
-}
+// ===== Fetch Dashboard Data =====
 
-// Fetch books
-$books = $conn->query("SELECT * FROM books ORDER BY id");
+$total_books = $conn->query("SELECT COUNT(*) as total FROM books")
+                    ->fetch_assoc()['total'] ?? 0;
+
+$returned_books = $conn->query("
+    SELECT COUNT(*) as total 
+    FROM issued_books 
+    WHERE return_date IS NOT NULL
+")->fetch_assoc()['total'] ?? 0;
+
+$not_returned = $conn->query("
+    SELECT COUNT(*) as total 
+    FROM issued_books 
+    WHERE return_date IS NULL
+")->fetch_assoc()['total'] ?? 0;
+
+$overdue = $conn->query("
+    SELECT COUNT(*) as total 
+    FROM issued_books 
+    WHERE return_date IS NULL 
+    AND due_date < CURDATE()
+")->fetch_assoc()['total'] ?? 0;
+
+$students = $conn->query("
+    SELECT COUNT(*) as total 
+    FROM users 
+    WHERE role = 'student'
+")->fetch_assoc()['total'] ?? 0;
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>Library Management System</title>
+<title>Library Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <style>
-body {
+* {
     margin: 0;
-    font-family: Arial;
-    background-color: #f5f6fa;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
 }
 
-.header {
-    background-color: #1976d2;
-    color: white;
-    padding: 20px;
-    font-size: 26px;
-    font-weight: bold;
+body {
+    display: flex;
+    min-height: 100vh;
+    background: #f4f6f9;
 }
 
+/* ===== Sidebar ===== */
 .sidebar {
-    width: 200px;
-    background-color: white;
-    position: fixed;
-    top: 80px;
-    bottom: 0;
-    padding-top: 20px;
-    border-right: 1px solid #ddd;
+    width: 240px;
+    background: #2c3e50;
+    color: white;
+    padding: 25px 15px;
+}
+
+.sidebar h3 {
+    margin-bottom: 30px;
+    text-align: center;
+    font-weight: 600;
 }
 
 .sidebar a {
     display: block;
-    padding: 12px 20px;
+    padding: 12px 15px;
+    margin-bottom: 10px;
     text-decoration: none;
-    color: #1976d2;
-    font-weight: bold;
+    color: #ecf0f1;
+    border-radius: 8px;
+    transition: 0.3s;
 }
 
 .sidebar a:hover {
-    background-color: #f1f1f1;
+    background: #34495e;
 }
 
+/* ===== Main Content ===== */
 .main {
-    margin-left: 220px;
-    padding: 30px;
+    flex: 1;
+    padding: 40px;
 }
 
-.add-btn {
-    float: right;
-    background-color: #26a69a;
-    color: white;
-    padding: 8px 18px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
+.main h2 {
+    margin-bottom: 30px;
+    color: #333;
 }
 
-.add-btn:hover {
-    background-color: #1e8e82;
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 25px;
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-    background-color: white;
+.card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    transition: 0.3s;
 }
 
-table th, table td {
-    padding: 8px;
-    border: 1px solid #ddd;
-    text-align: left;
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-content h3 {
+    font-size: 28px;
+}
+
+.card-content p {
     font-size: 14px;
+    color: #666;
 }
 
-table th {
-    background-color: #f1f1f1;
+.icon {
+    font-size: 30px;
 }
 
-.action-btn {
-    padding:4px 8px;
-    font-size:12px;
-    text-decoration:none;
-    border-radius:4px;
-    color:white;
-    margin-right:5px;
-}
+.blue { border-left: 5px solid #2f80ed; }
+.green { border-left: 5px solid #27ae60; }
+.yellow { border-left: 5px solid #f2c94c; }
+.red { border-left: 5px solid #eb5757; }
 
-.edit-btn {
-    background-color:#f39c12;
-}
-
-.edit-btn:hover {
-    background-color:#d68910;
-}
-
-.delete-btn {
-    background-color:#e74c3c;
-}
-
-.delete-btn:hover {
-    background-color:#c0392b;
-}
 </style>
 </head>
 
 <body>
 
-<div class="header">
-    Trisha Vidya College Of Commerce & Management
-</div>
-
+<!-- ===== Sidebar ===== -->
 <div class="sidebar">
-    <a href="dashboard.php">Dashboard</a>
-    <a href="add_book.php">Books</a>
-    <a href="issue_book.php">Issue Books</a>
-    <a href="issued_book.php">Issued Books</a>
-    <a href="../logout.php">Logout</a>
+    <h3>Admin Panel</h3>
+    <a href="dashboard.php"><i class="fas fa-chart-line"></i> Dashboard</a>
+    <a href="manage_books.php"><i class="fas fa-book"></i> Manage Books</a>
+    <a href="add_book.php"><i class="fas fa-plus"></i> Add Book</a>
+    <a href="issue_book.php"><i class="fas fa-hand-holding"></i> Issue Book</a>
+    <a href="issued_book.php"><i class="fas fa-clipboard-list"></i> Issued Books</a>
+    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
 </div>
 
+<!-- ===== Main Content ===== -->
 <div class="main">
-    <h1>
-        Manage Books
-        <a href="add_book.php">
-            <button class="add-btn">Add Book</button>
-        </a>
-    </h1>
+    <h2>📊 Library Dashboard</h2>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Accession No</th>
-                <th>Title</th>
-                <th>Author</th>
-                <th>Category</th>
-                <th>Publisher</th>
-                <th>Edition</th>
-                <th>Price</th>
-                <th>Total</th>
-                <th>Quantity</th>
-                <th>Date</th>
-                <th style="width:120px;">Action</th>
-            </tr>
-        </thead>
-        <tbody>
+    <div class="dashboard">
 
-        <?php
-        if($books && $books->num_rows > 0) {
-            while($row = $books->fetch_assoc()) {
-                echo "<tr>
-                        <td>{$row['accession_no']}</td>
-                        <td>{$row['title']}</td>
-                        <td>{$row['author']}</td>
-                        <td>{$row['category']}</td>
-                        <td>{$row['publisher']}</td>
-                        <td>{$row['edition']}</td>
-                        <td>{$row['price']}</td>
-                        <td>{$row['total_copies']}</td>
-                        <td>{$row['quantity']}</td>
-                        <td>{$row['date_of_accession']}</td>
-                        <td>
-                            <a href='edit_book.php?id={$row['id']}' class='action-btn edit-btn'>Edit</a>
-                            <a href='dashboard.php?delete={$row['id']}' 
-                               class='action-btn delete-btn'
-                               onclick=\"return confirm('Are you sure you want to delete this book?')\">
-                               Delete
-                            </a>
-                        </td>
-                      </tr>";
-            }
-        } else {
-            echo "<tr><td colspan='11'>No books found</td></tr>";
-        }
-        ?>
+        <div class="card blue">
+            <div class="card-content">
+                <h3><?php echo $students; ?></h3>
+                <p>Total Students</p>
+            </div>
+            <div class="icon"><i class="fas fa-user-graduate"></i></div>
+        </div>
 
-        </tbody>
-    </table>
+        <div class="card green">
+            <div class="card-content">
+                <h3><?php echo $returned_books; ?></h3>
+                <p>Returned Books</p>
+            </div>
+            <div class="icon"><i class="fas fa-book"></i></div>
+        </div>
 
+        <div class="card blue">
+            <div class="card-content">
+                <h3><?php echo $total_books; ?></h3>
+                <p>Total Books</p>
+            </div>
+            <div class="icon"><i class="fas fa-layer-group"></i></div>
+        </div>
+
+        <div class="card yellow">
+            <div class="card-content">
+                <h3><?php echo $not_returned; ?></h3>
+                <p>Books Not Returned</p>
+            </div>
+            <div class="icon"><i class="fas fa-undo"></i></div>
+        </div>
+
+        <div class="card red">
+            <div class="card-content">
+                <h3><?php echo $overdue; ?></h3>
+                <p>Books Overdue</p>
+            </div>
+            <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
+        </div>
+
+    </div>
 </div>
 
 </body>

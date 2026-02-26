@@ -53,139 +53,196 @@ if(isset($_POST['login'])) {
 <title>Library Login</title>
 
 <style>
-body {
+* {
     margin: 0;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    background: url('https://images.unsplash.com/photo-1521587760476-6c12a4b040da') no-repeat center center fixed;
-    background-size: cover;
-    display: flex;
-    justify-content: flex-end; /* Move to right side */
-    align-items: center;
-    height: 100vh;
-    padding-right: 120px;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
 }
 
+body {
+    height: 100vh;
+    background: #f4f6f9;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Decorative background shapes */
 body::before {
     content: "";
     position: absolute;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-        to right,
-        rgba(0,0,0,0.75) 0%,
-        rgba(0,0,0,0.65) 40%,
-        rgba(0,0,0,0.4) 100%
-    );
-    z-index: 0;
+    width: 600px;
+    height: 600px;
+    background: linear-gradient(135deg, #2f80ed, #56ccf2);
+    border-radius: 50%;
+    top: -150px;
+    right: -150px;
+    opacity: 0.15;
 }
 
+body::after {
+    content: "";
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    background: linear-gradient(135deg, #27ae60, #6fcf97);
+    border-radius: 50%;
+    bottom: -150px;
+    left: -150px;
+    opacity: 0.12;
+}
+
+/* Login Card */
 .login-container {
     position: relative;
-    z-index: 1;
-    background: rgba(255,255,255,0.15);
-    backdrop-filter: blur(18px);
-    padding: 50px;
+    background: white;
     width: 420px;
-    border-radius: 18px;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-    color: white;
-    animation: fadeIn 0.8s ease-in-out;
+    padding: 45px;
+    border-radius: 20px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.12);
+    z-index: 1;
+    animation: fadeIn 0.6s ease;
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
+    from { opacity: 0; transform: translateY(25px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-h2 {
-    text-align:center;
-    margin-bottom:35px;
-    font-weight:600;
-    letter-spacing:1px;
+.login-container h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.login-container h2::after {
+    content: "";
+    display: block;
+    width: 70px;
+    height: 4px;
+    background: #2f80ed;
+    margin: 12px auto 0;
+    border-radius: 10px;
 }
 
 .form-group {
-    margin-bottom:20px;
+    margin-bottom: 20px;
 }
 
 label {
-    display:block;
-    margin-bottom:8px;
-    font-weight:500;
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #555;
 }
 
 input, select {
-    width:100%;
-    padding:12px;
-    border-radius:10px;
-    border:none;
-    font-size:14px;
-    outline:none;
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+    outline: none;
+    transition: 0.3s;
+    background: #f9fafc;
+}
+
+input:focus, select:focus {
+    border-color: #2f80ed;
+    box-shadow: 0 0 0 3px rgba(47,128,237,0.15);
+    background: white;
 }
 
 button {
-    width:100%;
-    padding:14px;
-    background:#0d6efd;
-    color:white;
-    border:none;
-    border-radius:10px;
-    cursor:pointer;
-    font-size:15px;
-    font-weight:500;
-    transition:0.3s;
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #2f80ed, #1f6ed4);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 500;
+    transition: 0.3s;
 }
 
 button:hover {
-    background:#0b5ed7;
-    transform: translateY(-2px);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(47,128,237,0.3);
 }
 
 .error {
-    color:#ff6b6b;
-    text-align:center;
-    margin-bottom:15px;
+    color: #e74c3c;
+    text-align: center;
+    margin-bottom: 15px;
 }
-</style>
+.branding {
+    position: absolute;
+    left: 80px;
+    top: 45%;
+    transform: translateY(-50%);
+    color: #2c3e50;
+}
+
+.branding h1 {
+    font-size: 32px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+}
+
+.branding p {
+    font-size: 14px;
+    color: #6c757d;
+}</style>
 </head>
 
 <body>
 
-<div class="login-container">
-    <h2>Library Login</h2>
-
-    <?php 
-    if(isset($error) && $error != "") {
-        echo "<p class='error'>$error</p>";
-    }
-    ?>
-
-    <form method="post">
-
-        <div class="form-group">
-            <label>Login As</label>
-            <select name="role" required>
-                <option value="">Select Role</option>
-                <option value="admin">Admin</option>
-                <option value="faculty">Faculty</option>
-                <option value="student">Student</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>Username</label>
-            <input type="text" name="username" required>
-        </div>
-
-        <div class="form-group">
-            <label>Password</label>
-            <input type="password" name="password" required>
-        </div>
-
-        <button type="submit" name="login">Login</button>
-
-    </form>
+<div class="branding">
+    <h1>Library Management</h1>
+    <p>Academic Resource Portal</p>
 </div>
+<div class="right-panel">
+    <div class="login-container">
+        <h2>Login to Continue</h2>
 
+        <?php 
+        if(isset($error) && $error != "") {
+            echo "<p class='error'>$error</p>";
+        }
+        ?>
+
+        <form method="post">
+
+            <div class="form-group">
+                <label>Login As</label>
+                <select name="role" required>
+                    <option value="">Select Role</option>
+                    <option value="admin">Admin</option>
+                    <option value="faculty">Faculty</option>
+                    <option value="student">Student</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" name="username" required>
+            </div>
+
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" required>
+            </div>
+
+            <button type="submit" name="login">Login</button>
+
+        </form>
+    </div>
+</div>
 </body>
 </html>

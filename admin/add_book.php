@@ -265,6 +265,62 @@ body { background:#f4f6f9; }
     border-radius:8px;
     margin-bottom:20px;
 }
+.sidebar {
+    width: 240px;
+    background: #2c3e50;
+    padding: 25px 15px;
+    color: white;
+    transition: 0.3s ease;
+    overflow: hidden;
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.collapse-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.sidebar a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 10px;
+    margin-bottom: 10px;
+    text-decoration: none;
+    color: #ecf0f1;
+    border-radius: 8px;
+    transition: 0.3s;
+}
+
+.sidebar a:hover {
+    background: #34495e;
+}
+
+/* COLLAPSED STATE */
+.sidebar.collapsed {
+    width: 70px;
+}
+
+.sidebar.collapsed h3 {
+    display: none;
+}
+
+.sidebar.collapsed a span {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-header {
+    justify-content: center;
+}
 </style>
 </head>
 
@@ -272,24 +328,24 @@ body { background:#f4f6f9; }
 
 <div class="wrapper">
 
-<div class="sidebar">
-    <h3>Admin Panel</h3>
-    <a href="dashboard.php"><i class="fas fa-chart-line"></i> Dashboard</a>
-    <a href="manage_books.php"><i class="fas fa-book"></i> Manage Books</a>
-    <a href="add_book.php"><i class="fas fa-plus"></i> Add Book</a>
-    <a href="issue_book.php"><i class="fas fa-hand-holding"></i> Issue Book</a>
-    <a href="issued_book.php"><i class="fas fa-clipboard-list"></i> Issued Books</a>
-    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
-</div>
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <h3>Admin Panel</h3>
+        <button class="collapse-btn" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
 
+    <a href="dashboard.php"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
+    <a href="manage_books.php"><i class="fas fa-book"></i> <span>Manage Books</span></a>
+    <a href="add_book.php"><i class="fas fa-plus"></i> <span>Add Book</span></a>
+    <a href="issue_book.php"><i class="fas fa-hand-holding"></i> <span>Issue Book</span></a>
+    <a href="issued_book.php"><i class="fas fa-clipboard-list"></i> <span>Issued Books</span></a>
+    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></a>
+</div>
 <div class="main">
 
-<div class="topbar">
-    <button class="toggle-btn">
-        <i class="fas fa-bars"></i>
-    </button>
-    <span class="page-title">Add New Book</span>
-</div>
+
 
 <div class="card">
 
@@ -370,6 +426,11 @@ body { background:#f4f6f9; }
 </div>
 </div>
 </div>
+<script>
+function toggleSidebar() {
+    document.getElementById("sidebar").classList.toggle("collapsed");
+}
+</script>
 
 </body>
 </html>

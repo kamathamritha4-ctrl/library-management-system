@@ -45,27 +45,44 @@ if(isset($_POST['issue'])) {
 }
 
 body {
-    display: flex;
-    min-height: 100vh;
     background: #f4f6f9;
 }
 
-/* Sidebar */
+.wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* ===== Sidebar ===== */
 .sidebar {
     width: 240px;
     background: #2c3e50;
     padding: 25px 15px;
     color: white;
+    transition: 0.3s ease;
+    overflow: hidden;
 }
 
-.sidebar h3 {
-    text-align: center;
-    margin-bottom: 30px;
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.collapse-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
 }
 
 .sidebar a {
-    display: block;
-    padding: 12px 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 10px;
     margin-bottom: 10px;
     text-decoration: none;
     color: #ecf0f1;
@@ -77,7 +94,24 @@ body {
     background: #34495e;
 }
 
-/* Main */
+/* Collapsed */
+.sidebar.collapsed {
+    width: 70px;
+}
+
+.sidebar.collapsed h3 {
+    display: none;
+}
+
+.sidebar.collapsed a span {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-header {
+    justify-content: center;
+}
+
+/* ===== Main ===== */
 .main {
     flex: 1;
     padding: 40px;
@@ -168,52 +202,56 @@ body {
 
 <body>
 
-<div class="sidebar">
-    <h3>Admin Panel</h3>
-    <a href="dashboard.php"><i class="fas fa-chart-line"></i> Dashboard</a>
-    <a href="manage_books.php"><i class="fas fa-book"></i> Manage Books</a>
-    <a href="add_book.php"><i class="fas fa-plus"></i> Add Book</a>
-    <a href="issue_book.php"><i class="fas fa-hand-holding"></i> Issue Book</a>
-    <a href="issued_book.php"><i class="fas fa-clipboard-list"></i> Issued Books</a>
-    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
-</div>
+<div class="wrapper">
 
-<div class="main">
-    <div class="card">
-        <h2>📖 Issue Book</h2>
+    <!-- Sidebar -->
+    <?php include("../includes/sidebar1.php"); ?>
 
-        <?php if(isset($success)) echo "<div class='alert-success'>$success</div>"; ?>
-        <?php if(isset($error)) echo "<div class='alert-error'>$error</div>"; ?>
+    <!-- Main Content -->
+    <div class="main">
+        <div class="card">
+            <h2>📖 Issue Book</h2>
 
-        <form method="post">
+            <?php if(isset($success)) echo "<div class='alert-success'>$success</div>"; ?>
+            <?php if(isset($error)) echo "<div class='alert-error'>$error</div>"; ?>
 
-            <div class="form-group">
-                <label>User ID</label>
-                <input type="number" name="user_id" required>
-            </div>
+            <form method="post">
 
-            <div class="form-group">
-                <label>Accession Number</label>
-                <input type="number" name="accession_no" required>
-            </div>
+                <div class="form-group">
+                    <label>User ID</label>
+                    <input type="number" name="user_id" required>
+                </div>
 
-            <div class="form-group">
-                <label>Issue Date</label>
-                <input type="text" value="<?php echo date('Y-m-d'); ?>" class="readonly" readonly>
-            </div>
+                <div class="form-group">
+                    <label>Accession Number</label>
+                    <input type="number" name="accession_no" required>
+                </div>
 
-            <div class="form-group">
-                <label>Due Date (15 Days)</label>
-                <input type="text" value="<?php echo date('Y-m-d', strtotime('+15 days')); ?>" class="readonly" readonly>
-            </div>
+                <div class="form-group">
+                    <label>Issue Date</label>
+                    <input type="text" value="<?php echo date('Y-m-d'); ?>" class="readonly" readonly>
+                </div>
 
-            <button type="submit" name="issue" class="btn">
-                <i class="fas fa-check-circle"></i> Issue Book
-            </button>
+                <div class="form-group">
+                    <label>Due Date (15 Days)</label>
+                    <input type="text" value="<?php echo date('Y-m-d', strtotime('+15 days')); ?>" class="readonly" readonly>
+                </div>
 
-        </form>
+                <button type="submit" name="issue" class="btn">
+                    <i class="fas fa-check-circle"></i> Issue Book
+                </button>
+
+            </form>
+        </div>
     </div>
+
 </div>
+
+<script>
+function toggleSidebar() {
+    document.getElementById("sidebar").classList.toggle("collapsed");
+}
+</script>
 
 </body>
 </html>

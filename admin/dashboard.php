@@ -56,28 +56,44 @@ $students = $conn->query("
 }
 
 body {
+    background: #f4f6f9;
+}
+
+.wrapper {
     display: flex;
     min-height: 100vh;
-    background: #f4f6f9;
 }
 
 /* ===== Sidebar ===== */
 .sidebar {
     width: 240px;
     background: #2c3e50;
-    color: white;
     padding: 25px 15px;
+    color: white;
+    transition: 0.3s ease;
+    overflow: hidden;
 }
 
-.sidebar h3 {
-    margin-bottom: 30px;
-    text-align: center;
-    font-weight: 600;
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.collapse-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
 }
 
 .sidebar a {
-    display: block;
-    padding: 12px 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 10px;
     margin-bottom: 10px;
     text-decoration: none;
     color: #ecf0f1;
@@ -87,6 +103,23 @@ body {
 
 .sidebar a:hover {
     background: #34495e;
+}
+
+/* Collapsed state */
+.sidebar.collapsed {
+    width: 70px;
+}
+
+.sidebar.collapsed h3 {
+    display: none;
+}
+
+.sidebar.collapsed a span {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-header {
+    justify-content: center;
 }
 
 /* ===== Main Content ===== */
@@ -144,65 +177,68 @@ body {
 
 <body>
 
-<!-- ===== Sidebar ===== -->
-<div class="sidebar">
-    <h3>Admin Panel</h3>
-    <a href="dashboard.php"><i class="fas fa-chart-line"></i> Dashboard</a>
-    <a href="manage_books.php"><i class="fas fa-book"></i> Manage Books</a>
-    <a href="add_book.php"><i class="fas fa-plus"></i> Add Book</a>
-    <a href="issue_book.php"><i class="fas fa-hand-holding"></i> Issue Book</a>
-    <a href="issued_book.php"><i class="fas fa-clipboard-list"></i> Issued Books</a>
-    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
-</div>
+<div class="wrapper">
 
-<!-- ===== Main Content ===== -->
-<div class="main">
-    <h2>📊 Library Dashboard</h2>
+    <!-- Sidebar -->
+    <?php include("../includes/sidebar1.php"); ?>
 
-    <div class="dashboard">
+    <!-- Main Content -->
+    <div class="main">
+        <h2>📊 Library Dashboard</h2>
 
-        <div class="card blue">
-            <div class="card-content">
-                <h3><?php echo $students; ?></h3>
-                <p>Total Students</p>
+        <div class="dashboard">
+
+            <div class="card blue">
+                <div class="card-content">
+                    <h3><?php echo $students; ?></h3>
+                    <p>Total Students</p>
+                </div>
+                <div class="icon"><i class="fas fa-user-graduate"></i></div>
             </div>
-            <div class="icon"><i class="fas fa-user-graduate"></i></div>
-        </div>
 
-        <div class="card green">
-            <div class="card-content">
-                <h3><?php echo $returned_books; ?></h3>
-                <p>Returned Books</p>
+            <div class="card green">
+                <div class="card-content">
+                    <h3><?php echo $returned_books; ?></h3>
+                    <p>Returned Books</p>
+                </div>
+                <div class="icon"><i class="fas fa-book"></i></div>
             </div>
-            <div class="icon"><i class="fas fa-book"></i></div>
-        </div>
 
-        <div class="card blue">
-            <div class="card-content">
-                <h3><?php echo $total_books; ?></h3>
-                <p>Total Books</p>
+            <div class="card blue">
+                <div class="card-content">
+                    <h3><?php echo $total_books; ?></h3>
+                    <p>Total Books</p>
+                </div>
+                <div class="icon"><i class="fas fa-layer-group"></i></div>
             </div>
-            <div class="icon"><i class="fas fa-layer-group"></i></div>
-        </div>
 
-        <div class="card yellow">
-            <div class="card-content">
-                <h3><?php echo $not_returned; ?></h3>
-                <p>Books Not Returned</p>
+            <div class="card yellow">
+                <div class="card-content">
+                    <h3><?php echo $not_returned; ?></h3>
+                    <p>Books Not Returned</p>
+                </div>
+                <div class="icon"><i class="fas fa-undo"></i></div>
             </div>
-            <div class="icon"><i class="fas fa-undo"></i></div>
-        </div>
 
-        <div class="card red">
-            <div class="card-content">
-                <h3><?php echo $overdue; ?></h3>
-                <p>Books Overdue</p>
+            <div class="card red">
+                <div class="card-content">
+                    <h3><?php echo $overdue; ?></h3>
+                    <p>Books Overdue</p>
+                </div>
+                <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
             </div>
-            <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
-        </div>
 
+        </div>
     </div>
+
 </div>
+
+<!-- Sidebar Toggle Script -->
+<script>
+function toggleSidebar() {
+    document.getElementById("sidebar").classList.toggle("collapsed");
+}
+</script>
 
 </body>
 </html>

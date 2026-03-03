@@ -37,27 +37,44 @@ $books = $conn->query("SELECT * FROM books ORDER BY id");
 }
 
 body {
-    display: flex;
-    min-height: 100vh;
     background: #f4f6f9;
 }
 
-/* Sidebar */
+.wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* ===== Sidebar ===== */
 .sidebar {
     width: 240px;
     background: #2c3e50;
     padding: 25px 15px;
     color: white;
+    transition: 0.3s ease;
+    overflow: hidden;
 }
 
-.sidebar h3 {
-    text-align: center;
-    margin-bottom: 30px;
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.collapse-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
 }
 
 .sidebar a {
-    display: block;
-    padding: 12px 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 10px;
     margin-bottom: 10px;
     text-decoration: none;
     color: #ecf0f1;
@@ -69,7 +86,24 @@ body {
     background: #34495e;
 }
 
-/* Main */
+/* Collapsed */
+.sidebar.collapsed {
+    width: 70px;
+}
+
+.sidebar.collapsed h3 {
+    display: none;
+}
+
+.sidebar.collapsed a span {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-header {
+    justify-content: center;
+}
+
+/* ===== Main ===== */
 .main {
     flex: 1;
     padding: 40px;
@@ -163,80 +197,84 @@ table tr:hover {
 
 <body>
 
-<!-- Sidebar -->
-<div class="sidebar">
-    <h3>Admin Panel</h3>
-    <a href="dashboard.php"><i class="fas fa-chart-line"></i> Dashboard</a>
-    <a href="manage_books.php"><i class="fas fa-book"></i> Manage Books</a>
-    <a href="add_book.php"><i class="fas fa-plus"></i> Add Book</a>
-    <a href="issue_book.php"><i class="fas fa-hand-holding"></i> Issue Book</a>
-    <a href="issued_book.php"><i class="fas fa-clipboard-list"></i> Issued Books</a>
-    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
-</div>
+<div class="wrapper">
 
-<!-- Main Content -->
-<div class="main">
+    <!-- Sidebar -->
+    <?php include("../includes/sidebar1.php"); ?>
 
-    <div class="main-header">
-        <h2>📚 Manage Books</h2>
-        <a href="add_book.php">
-            <button class="add-btn"><i class="fas fa-plus"></i> Add Book</button>
-        </a>
-    </div>
+    <!-- Main Content -->
+    <div class="main">
 
-    <div class="table-card">
-        <table>
-            <thead>
-                <tr>
-                    <th>Accession No</th>
-                    <th>Title</th>
-                    <th>Author</th>
-                    <th>Category</th>
-                    <th>Publisher</th>
-                    <th>Edition</th>
-                    <th>Price</th>
-                    <th>Total</th>
-                    <th>Available</th>
-                    <th>Date</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
+        <div class="main-header">
+            <h2>📚 Manage Books</h2>
+            <a href="add_book.php">
+                <button class="add-btn">
+                    <i class="fas fa-plus"></i> Add Book
+                </button>
+            </a>
+        </div>
 
-            <?php
-            if($books && $books->num_rows > 0) {
-                while($row = $books->fetch_assoc()) {
-                    echo "<tr>
-                            <td>{$row['accession_no']}</td>
-                            <td>{$row['title']}</td>
-                            <td>{$row['author']}</td>
-                            <td>{$row['category']}</td>
-                            <td>{$row['publisher']}</td>
-                            <td>{$row['edition']}</td>
-                            <td>₹ {$row['price']}</td>
-                            <td>{$row['total_copies']}</td>
-                            <td>{$row['quantity']}</td>
-                            <td>{$row['date_of_accession']}</td>
-                            <td>
-                                <a href='edit_book.php?id={$row['id']}' class='action-btn edit-btn'>Edit</a>
-                                <a href='manage_books.php?delete={$row['id']}' 
-                                   class='action-btn delete-btn'
-                                   onclick=\"return confirm('Are you sure you want to delete this book?')\">
-                                   Delete
-                                </a>
-                            </td>
-                          </tr>";
+        <div class="table-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Accession No</th>
+                        <th>Title</th>
+                        <th>Author</th>
+                        <th>Category</th>
+                        <th>Publisher</th>
+                        <th>Edition</th>
+                        <th>Price</th>
+                        <th>Total</th>
+                        <th>Available</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                <?php
+                if($books && $books->num_rows > 0) {
+                    while($row = $books->fetch_assoc()) {
+                        echo "<tr>
+                                <td>{$row['accession_no']}</td>
+                                <td>{$row['title']}</td>
+                                <td>{$row['author']}</td>
+                                <td>{$row['category']}</td>
+                                <td>{$row['publisher']}</td>
+                                <td>{$row['edition']}</td>
+                                <td>₹ {$row['price']}</td>
+                                <td>{$row['total_copies']}</td>
+                                <td>{$row['quantity']}</td>
+                                <td>{$row['date_of_accession']}</td>
+                                <td>
+                                    <a href='edit_book.php?id={$row['id']}' class='action-btn edit-btn'>Edit</a>
+                                    <a href='manage_books.php?delete={$row['id']}'
+                                       class='action-btn delete-btn'
+                                       onclick=\"return confirm('Are you sure you want to delete this book?')\">
+                                       Delete
+                                    </a>
+                                </td>
+                              </tr>";
+                    }
+                } else {
+                    echo "<tr><td colspan='11'>No books found</td></tr>";
                 }
-            } else {
-                echo "<tr><td colspan='11'>No books found</td></tr>";
-            }
-            ?>
+                ?>
 
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
+
     </div>
 
 </div>
+
+<script>
+function toggleSidebar() {
+    document.getElementById("sidebar").classList.toggle("collapsed");
+}
+</script>
 
 </body>
 </html>

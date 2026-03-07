@@ -11,9 +11,11 @@ if(isset($_GET['return_id'])) {
 
     $id = $_GET['return_id'];
 
+    // Get issued book details
     $result = $conn->query("SELECT * FROM issued_books WHERE id = $id");
     $row = $result->fetch_assoc();
 
+    $accession_no = $row['accession_no'];
     $due_date = $row['due_date'];
     $today = date("Y-m-d");
 
@@ -24,11 +26,17 @@ if(isset($_GET['return_id'])) {
         $fine = $days * 5;
     }
 
+    // Update issued_books (mark returned)
     $conn->query("UPDATE issued_books 
                   SET return_date='$today', fine='$fine' 
                   WHERE id=$id");
 
-    header("Location: issued_book.php");
+    // Increase available quantity in books table
+    $conn->query("UPDATE books 
+                  SET quantity = quantity + 1
+                  WHERE accession_no='$accession_no'");
+
+    header("Location: issued_books.php");
     exit();
 }
 
@@ -68,7 +76,7 @@ body {
     min-height: 100vh;
 }
 
-/* ===== Sidebar ===== */
+/* Sidebar */
 .sidebar {
     width: 240px;
     background: #2c3e50;
@@ -109,7 +117,6 @@ body {
     background: #34495e;
 }
 
-/* Collapsed */
 .sidebar.collapsed {
     width: 70px;
 }
@@ -126,7 +133,7 @@ body {
     justify-content: center;
 }
 
-/* ===== Main ===== */
+/* Main */
 .main {
     flex: 1;
     padding: 40px;
@@ -217,7 +224,7 @@ table tr:hover {
                 if($issues && $issues->num_rows > 0) {
                     while($row = $issues->fetch_assoc()) {
 
-                        $status = "<a href='?return_id={$row['id']}' 
+                        $status = "<a href='?return_id={$row['id']}'
                                     class='return-btn'
                                     onclick=\"return confirm('Mark this book as returned?')\">
                                     Return

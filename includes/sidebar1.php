@@ -32,6 +32,16 @@
         <span>Issued Books</span>
     </a>
 
+    <a href="manage_holidays.php">
+        <i class="fas fa-calendar-days"></i>
+        <span>Holidays</span>
+    </a>
+
+    <a href="export_books.php">
+        <i class="fas fa-file-export"></i>
+        <span>Export Books</span>
+    </a>
+
     <a href="../logout.php">
         <i class="fas fa-sign-out-alt"></i>
         <span>Logout</span>

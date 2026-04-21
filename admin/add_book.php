@@ -4,7 +4,7 @@ include_once("../config/config.php");
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
-if(!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
+if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     header("Location: ../index.php");
     exit();
 }
@@ -12,425 +12,183 @@ if(!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
 $success = "";
 $error = "";
 
-/* =====================================
-   BULK IMPORT (Excel + CSV)
-===================================== */
-if(isset($_POST['import'])) {
+if (isset($_POST['import']) && isset($_FILES['file']) && $_FILES['file']['error'] === 0) {
+    try {
+        $spreadsheet = IOFactory::load($_FILES['file']['tmp_name']);
+        $rows = $spreadsheet->getActiveSheet()->toArray();
 
-    if(isset($_FILES['file']) && $_FILES['file']['error'] == 0) {
-
-        try {
-
-            $spreadsheet = IOFactory::load($_FILES['file']['tmp_name']);
-            $sheet = $spreadsheet->getActiveSheet();
-            $rows = $sheet->toArray();
-
-            foreach($rows as $index => $row) {
-
-                if($index == 0) continue; // Skip header row
-
-                $accession_no = $row[0];
-                $category     = $row[1];
-                $author       = $row[2];
-                $title        = $row[3];
-                $publisher    = $row[4];
-                $price        = $row[5];
-                $quantity     = $row[6];
-                $edition      = $row[7];
-                $date         = date("Y-m-d");
-
-                // Check duplicate accession
-                $check = $conn->prepare("SELECT id FROM books WHERE accession_no = ?");
-                $check->bind_param("i", $accession_no);
-                $check->execute();
-                $check->store_result();
-
-                if($check->num_rows > 0) continue;
-
-                $stmt = $conn->prepare("INSERT INTO books 
-                (accession_no, category, author, title, publisher, year, price, total_copies, quantity, edition, supplier, remarks, date_of_accession)
-                VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL, NULL, ?)");
-
-                $stmt->bind_param(
-                    "issssdiis",
-                    $accession_no,
-                    $category,
-                    $author,
-                    $title,
-                    $publisher,
-                    $price,
-                    $quantity,
-                    $quantity,
-                    $edition,
-                    $date
-                );
-
-                $stmt->execute();
+        foreach ($rows as $index => $row) {
+            if ($index === 0) {
+                continue;
             }
 
-            $success = "Bulk import completed successfully!";
+            $accessionNo = (int) ($row[0] ?? 0);
+            if ($accessionNo <= 0) {
+                continue;
+            }
 
-        } catch(Exception $e) {
-            $error = "Import failed: " . $e->getMessage();
+            $dateOfAccession = !empty($row[1]) ? date('Y-m-d', strtotime((string) $row[1])) : date('Y-m-d');
+            $subject = trim((string) ($row[2] ?? ''));
+            $author = trim((string) ($row[3] ?? ''));
+            $title = trim((string) ($row[4] ?? ''));
+            $publisher = trim((string) ($row[5] ?? ''));
+            $year = !empty($row[6]) ? (int) $row[6] : null;
+            $price = isset($row[7]) ? (float) $row[7] : 0;
+            $total = isset($row[8]) ? (int) $row[8] : 1;
+            $billNo = trim((string) ($row[9] ?? ''));
+            $billDate = !empty($row[10]) ? date('Y-m-d', strtotime((string) $row[10])) : null;
+            $supplier = trim((string) ($row[11] ?? ''));
+            $edition = trim((string) ($row[12] ?? ''));
+            $remarks = trim((string) ($row[13] ?? ''));
+
+            $check = $conn->prepare("SELECT id FROM books WHERE accession_no = ?");
+            $check->bind_param("i", $accessionNo);
+            $check->execute();
+            $exists = $check->get_result();
+            if ($exists->num_rows > 0) {
+                continue;
+            }
+
+            $stmt = $conn->prepare("INSERT INTO books (date_of_accession, accession_no, category, author, title, publisher, year, price, total_copies, quantity, bill_no, bill_date, supplier, edition, remarks)
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param(
+                "sisssssdiiissss",
+                $dateOfAccession,
+                $accessionNo,
+                $subject,
+                $author,
+                $title,
+                $publisher,
+                $year,
+                $price,
+                $total,
+                $total,
+                $billNo,
+                $billDate,
+                $supplier,
+                $edition,
+                $remarks
+            );
+            $stmt->execute();
         }
+
+        $success = "Bulk import completed successfully.";
+    } catch (Exception $e) {
+        $error = "Import failed: " . $e->getMessage();
     }
 }
 
-/* =====================================
-   SINGLE BOOK INSERT
-===================================== */
-if(isset($_POST['save'])) {
+if (isset($_POST['save'])) {
+    $dateOfAccession = $_POST['date_of_accession'] ?: date('Y-m-d');
+    $accessionNo = (int) $_POST['accession_no'];
+    $subject = trim($_POST['subject']);
+    $author = trim($_POST['author']);
+    $title = trim($_POST['title']);
+    $publisher = trim($_POST['publisher']);
+    $year = $_POST['year'] !== '' ? (int) $_POST['year'] : null;
+    $price = $_POST['price'] !== '' ? (float) $_POST['price'] : 0;
+    $total = max(1, (int) $_POST['total_copies']);
+    $billNo = trim($_POST['bill_no']);
+    $billDate = $_POST['bill_date'] ?: null;
+    $supplier = trim($_POST['supplier']);
+    $edition = trim($_POST['edition']);
+    $remarks = trim($_POST['remarks']);
 
-    $accession_no = $_POST['book_id'];
-    $category     = $_POST['category'];
-    $author       = $_POST['author'];
-    $title        = $_POST['title'];
-    $publisher    = $_POST['publisher'];
-    $price        = $_POST['price'];
-    $quantity     = $_POST['quantity'];
-    $edition      = $_POST['edition'];
-    $date         = date("Y-m-d");
-
-    // Check duplicate accession
     $check = $conn->prepare("SELECT id FROM books WHERE accession_no = ?");
-    $check->bind_param("i", $accession_no);
+    $check->bind_param("i", $accessionNo);
     $check->execute();
-    $check->store_result();
+    $exists = $check->get_result();
 
-    if($check->num_rows > 0) {
-        $error = "Accession number already exists!";
+    if ($exists->num_rows > 0) {
+        $error = "Accession number already exists.";
     } else {
-
-        $stmt = $conn->prepare("INSERT INTO books 
-        (accession_no, category, author, title, publisher, year, price, total_copies, quantity, edition, supplier, remarks, date_of_accession)
-        VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL, NULL, ?)");
-
+        $stmt = $conn->prepare("INSERT INTO books (date_of_accession, accession_no, category, author, title, publisher, year, price, total_copies, quantity, bill_no, bill_date, supplier, edition, remarks)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->bind_param(
-            "issssdiis",
-            $accession_no,
-            $category,
+            "sisssssdiiissss",
+            $dateOfAccession,
+            $accessionNo,
+            $subject,
             $author,
             $title,
             $publisher,
+            $year,
             $price,
-            $quantity,
-            $quantity,
+            $total,
+            $total,
+            $billNo,
+            $billDate,
+            $supplier,
             $edition,
-            $date
+            $remarks
         );
 
-        if($stmt->execute()) {
-            $success = "Book Added Successfully!";
+        if ($stmt->execute()) {
+            $success = "Book added successfully.";
         } else {
             $error = "Error: " . $stmt->error;
         }
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <title>Add Book</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
 <style>
-* { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins', sans-serif; }
-body { background:#f4f6f9; }
-
-.wrapper { display:flex; min-height:100vh; }
-
-.sidebar {
-    width:240px;
-    background:#2c3e50;
-    padding:25px 15px;
-    color:white;
-}
-
-.sidebar h3 { text-align:center; margin-bottom:30px; }
-
-.sidebar a {
-    display:block;
-    padding:12px 15px;
-    margin-bottom:10px;
-    text-decoration:none;
-    color:#ecf0f1;
-    border-radius:8px;
-    transition:0.3s;
-}
-
-.sidebar a:hover { background:#34495e; }
-
-.main { flex:1; padding:30px; }
-
-.topbar {
-    display:flex;
-    align-items:center;
-    gap:20px;
-    margin-bottom:30px;
-}
-
-.toggle-btn {
-    background:#2c3e50;
-    border:none;
-    color:white;
-    padding:10px 14px;
-    border-radius:8px;
-    cursor:pointer;
-}
-
-.page-title {
-    font-size:22px;
-    font-weight:600;
-    color:#2c3e50;
-}
-
-.card {
-    background:white;
-    border-radius:18px;
-    padding:35px;
-    max-width:900px;
-    margin:auto;
-    box-shadow:0 15px 40px rgba(0,0,0,0.08);
-}
-
-.form-row {
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:20px;
-}
-
-.form-group { margin-bottom:18px; }
-
-.form-group label {
-    display:block;
-    margin-bottom:6px;
-    font-weight:500;
-    font-size:14px;
-}
-
-.form-group input {
-    width:100%;
-    padding:11px 14px;
-    border-radius:10px;
-    border:1px solid #ddd;
-    background:#f9fafc;
-}
-
-.form-group input:focus {
-    border-color:#4f46e5;
-    outline:none;
-    box-shadow:0 0 0 3px rgba(79,70,229,0.15);
-}
-
-.button-group {
-    margin-top:25px;
-    display:flex;
-    gap:15px;
-}
-
-.btn {
-    padding:11px 22px;
-    border-radius:10px;
-    border:none;
-    cursor:pointer;
-    font-weight:600;
-}
-
-.btn-save {
-    background:linear-gradient(135deg,#4f46e5,#6366f1);
-    color:white;
-}
-
-.btn-reset {
-    background:#bdc3c7;
-}
-
-.alert-success {
-    background:#d4edda;
-    color:#155724;
-    padding:10px 15px;
-    border-radius:8px;
-    margin-bottom:20px;
-}
-
-.alert-error {
-    background:#f8d7da;
-    color:#721c24;
-    padding:10px 15px;
-    border-radius:8px;
-    margin-bottom:20px;
-}
-.sidebar {
-    width: 240px;
-    background: #2c3e50;
-    padding: 25px 15px;
-    color: white;
-    transition: 0.3s ease;
-    overflow: hidden;
-}
-
-.sidebar-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 25px;
-}
-
-.collapse-btn {
-    background: transparent;
-    border: none;
-    color: white;
-    font-size: 18px;
-    cursor: pointer;
-}
-
-.sidebar a {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 10px;
-    margin-bottom: 10px;
-    text-decoration: none;
-    color: #ecf0f1;
-    border-radius: 8px;
-    transition: 0.3s;
-}
-
-.sidebar a:hover {
-    background: #34495e;
-}
-
-/* COLLAPSED STATE */
-.sidebar.collapsed {
-    width: 70px;
-}
-
-.sidebar.collapsed h3 {
-    display: none;
-}
-
-.sidebar.collapsed a span {
-    display: none;
-}
-
-.sidebar.collapsed .sidebar-header {
-    justify-content: center;
-}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}body{background:#f4f6f9}.wrapper{display:flex;min-height:100vh}.main{flex:1;padding:30px}.card{background:white;border-radius:16px;padding:26px;max-width:980px;margin:auto;box-shadow:0 15px 35px rgba(0,0,0,.08)}.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}.form-group{margin-bottom:12px}.form-group label{display:block;margin-bottom:6px;font-size:14px}.form-group input,.form-group textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:8px}.actions{display:flex;gap:10px;margin-top:14px}.btn{padding:10px 16px;border:none;border-radius:8px;cursor:pointer}.btn-save{background:#4f46e5;color:#fff}.btn-reset{background:#cbd5e1}.alert-success,.alert-error{padding:10px 12px;border-radius:8px;margin-bottom:10px}.alert-success{background:#d4edda;color:#155724}.alert-error{background:#f8d7da;color:#721c24}
+@media(max-width:760px){.row{grid-template-columns:1fr}.main{padding:18px}}
 </style>
 </head>
-
 <body>
-
 <div class="wrapper">
+<?php include("../includes/sidebar1.php"); ?>
+<div class="main"><div class="card">
+<h2 style="margin-bottom:14px;">📘 Add New Book</h2>
+<?php if($success) echo "<div class='alert-success'>{$success}</div>"; ?>
+<?php if($error) echo "<div class='alert-error'>{$error}</div>"; ?>
 
-<div class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-        <h3>Admin Panel</h3>
-        <button class="collapse-btn" onclick="toggleSidebar()">
-            <i class="fas fa-bars"></i>
-        </button>
-    </div>
-
-    <a href="dashboard.php"><i class="fas fa-chart-line"></i> <span>Dashboard</span></a>
-    <a href="manage_books.php"><i class="fas fa-book"></i> <span>Manage Books</span></a>
-    <a href="add_book.php"><i class="fas fa-plus"></i> <span>Add Book</span></a>
-    <a href="issue_book.php"><i class="fas fa-hand-holding"></i> <span>Issue Book</span></a>
-    <a href="issued_book.php"><i class="fas fa-clipboard-list"></i> <span>Issued Books</span></a>
-    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></a>
-</div>
-<div class="main">
-
-
-
-<div class="card">
-
-<h2>📘 Add New Book</h2>
-
-<?php if($success) echo "<div class='alert-success'>$success</div>"; ?>
-<?php if($error) echo "<div class='alert-error'>$error</div>"; ?>
-
-<!-- BULK IMPORT -->
-<hr style="margin:25px 0;">
-<h3>📂 Bulk Import (Excel / CSV)</h3>
-
-<form method="post" enctype="multipart/form-data">
-    <div class="form-group">
-        <input type="file" name="file" accept=".xlsx,.xls,.csv" required>
-    </div>
-    <button type="submit" name="import" class="btn btn-save">
-        Import File
-    </button>
+<h3 style="margin:8px 0;">Bulk Import (Excel/CSV)</h3>
+<form method="post" enctype="multipart/form-data" style="margin-bottom:18px;">
+  <input type="file" name="file" accept=".xlsx,.xls,.csv" required>
+  <button type="submit" name="import" class="btn btn-save">Import</button>
 </form>
 
-<hr style="margin:25px 0;">
-
-<!-- SINGLE ADD FORM -->
 <form method="post">
-
-<div class="form-row">
-    <div class="form-group">
-        <label>Accession Number</label>
-        <input type="number" name="book_id" required>
-    </div>
-    <div class="form-group">
-        <label>Edition</label>
-        <input type="text" name="edition">
-    </div>
+<div class="row">
+  <div class="form-group"><label>Date of Accession</label><input type="date" name="date_of_accession" value="<?php echo date('Y-m-d');?>" required></div>
+  <div class="form-group"><label>Accession Number</label><input type="number" name="accession_no" required></div>
 </div>
-
-<div class="form-row">
-    <div class="form-group">
-        <label>Title</label>
-        <input type="text" name="title" required>
-    </div>
-    <div class="form-group">
-        <label>Author</label>
-        <input type="text" name="author" required>
-    </div>
+<div class="row">
+  <div class="form-group"><label>Subject</label><input type="text" name="subject" required></div>
+  <div class="form-group"><label>Author</label><input type="text" name="author" required></div>
 </div>
-
-<div class="form-row">
-    <div class="form-group">
-        <label>Publisher</label>
-        <input type="text" name="publisher" required>
-    </div>
-    <div class="form-group">
-        <label>Category</label>
-        <input type="text" name="category" required>
-    </div>
+<div class="row">
+  <div class="form-group"><label>Title & Volume</label><input type="text" name="title" required></div>
+  <div class="form-group"><label>Publisher</label><input type="text" name="publisher"></div>
 </div>
-
-<div class="form-row">
-    <div class="form-group">
-        <label>Price (₹)</label>
-        <input type="number" step="0.01" name="price">
-    </div>
-    <div class="form-group">
-        <label>Quantity</label>
-        <input type="number" name="quantity" required>
-    </div>
+<div class="row">
+  <div class="form-group"><label>Year</label><input type="number" name="year"></div>
+  <div class="form-group"><label>Price Rs</label><input type="number" step="0.01" name="price"></div>
 </div>
-
-<div class="button-group">
-    <button type="reset" class="btn btn-reset">Reset</button>
-    <button type="submit" name="save" class="btn btn-save">Save Book</button>
+<div class="row">
+  <div class="form-group"><label>Total Copies</label><input type="number" name="total_copies" min="1" required></div>
+  <div class="form-group"><label>Bill No</label><input type="text" name="bill_no"></div>
 </div>
-
+<div class="row">
+  <div class="form-group"><label>Bill Date</label><input type="date" name="bill_date"></div>
+  <div class="form-group"><label>Supplier</label><input type="text" name="supplier"></div>
+</div>
+<div class="row">
+  <div class="form-group"><label>Edition</label><input type="text" name="edition"></div>
+  <div class="form-group"><label>Remarks</label><textarea name="remarks" rows="1"></textarea></div>
+</div>
+<div class="actions"><button class="btn btn-save" type="submit" name="save">Save Book</button><button class="btn btn-reset" type="reset">Reset</button></div>
 </form>
-
-</div>
-</div>
-</div>
-<script>
-function toggleSidebar() {
-    document.getElementById("sidebar").classList.toggle("collapsed");
-}
-</script>
-
-</body>
-</html>
+</div></div></div>
+<script>function toggleSidebar(){document.getElementById('sidebar').classList.toggle('collapsed');}</script>
+</body></html>

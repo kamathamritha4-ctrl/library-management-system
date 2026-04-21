@@ -58,8 +58,11 @@ if (isset($_POST['update'])) {
 <html><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Edit Book</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-<style>*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif}body{background:#f4f6f9}.wrapper{display:flex;min-height:100vh}.main{flex:1;padding:30px}.card{background:#fff;border-radius:14px;padding:25px;max-width:980px;margin:auto;box-shadow:0 10px 24px rgba(0,0,0,.08)}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form-group{margin-bottom:11px}.form-group label{display:block;margin-bottom:6px;font-size:14px}.form-group input,.form-group textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:8px}.btn{margin-top:10px;padding:10px 16px;border:none;background:#f39c12;color:white;border-radius:8px;cursor:pointer}.alert{background:#f8d7da;color:#721c24;padding:10px;border-radius:8px;margin-bottom:12px}@media(max-width:760px){.row{grid-template-columns:1fr}}</style>
-</head><body><div class="wrapper"><?php include("../includes/sidebar1.php"); ?><div class="main"><div class="card"><h2 style="margin-bottom:15px;">✏️ Edit Book</h2><?php if($error) echo "<div class='alert'>{$error}</div>"; ?><form method="post">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="admin-theme.css">
+</head><body><div class="wrapper"><?php include("../includes/sidebar1.php"); ?><div class="main">
+<div class="page-header"><h2>✏️ Edit Book</h2></div>
+<div class="card"><?php if($error) echo "<div class='alert-error'>{$error}</div>"; ?><form method="post">
 <div class="row"><div class="form-group"><label>Date of Accession</label><input type="date" name="date_of_accession" value="<?php echo htmlspecialchars($book['date_of_accession']); ?>" required></div><div class="form-group"><label>Accession No</label><input type="number" name="accession_no" value="<?php echo (int)$book['accession_no']; ?>" required></div></div>
 <div class="row"><div class="form-group"><label>Subject</label><input type="text" name="subject" value="<?php echo htmlspecialchars($book['category']); ?>" required></div><div class="form-group"><label>Author</label><input type="text" name="author" value="<?php echo htmlspecialchars($book['author']); ?>" required></div></div>
 <div class="row"><div class="form-group"><label>Title & Volume</label><input type="text" name="title" value="<?php echo htmlspecialchars($book['title']); ?>" required></div><div class="form-group"><label>Publisher</label><input type="text" name="publisher" value="<?php echo htmlspecialchars($book['publisher']); ?>"></div></div>
@@ -68,6 +71,6 @@ if (isset($_POST['update'])) {
 <div class="row"><div class="form-group"><label>Bill No</label><input type="text" name="bill_no" value="<?php echo htmlspecialchars((string)$book['bill_no']); ?>"></div><div class="form-group"><label>Bill Date</label><input type="date" name="bill_date" value="<?php echo htmlspecialchars((string)$book['bill_date']); ?>"></div></div>
 <div class="row"><div class="form-group"><label>Supplier</label><input type="text" name="supplier" value="<?php echo htmlspecialchars((string)$book['supplier']); ?>"></div><div class="form-group"><label>Edition</label><input type="text" name="edition" value="<?php echo htmlspecialchars((string)$book['edition']); ?>"></div></div>
 <div class="form-group"><label>Remarks</label><textarea name="remarks" rows="2"><?php echo htmlspecialchars((string)$book['remarks']); ?></textarea></div>
-<button type="submit" name="update" class="btn">Update Book</button></form></div></div></div>
+<div class="actions"><button type="submit" name="update" class="btn btn-primary">Update Book</button></div></form></div></div></div>
 <script>function toggleSidebar(){document.getElementById('sidebar').classList.toggle('collapsed');}</script>
 </body></html>

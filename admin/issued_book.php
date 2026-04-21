@@ -87,76 +87,46 @@ if (isset($_POST['send_overdue_notifications'])) {
 
 $issues = $conn->query("SELECT ib.*, b.title FROM issued_books ib JOIN books b ON ib.accession_no = b.accession_no WHERE ib.return_date IS NULL ORDER BY ib.id DESC");
 ?>
-
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Issued Books</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8"><title>Issued Books</title><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}body{background:#f4f6f9}.wrapper{display:flex;min-height:100vh}.main{flex:1;padding:40px}.main h2{margin-bottom:20px;color:#333}.table-card{background:white;border-radius:15px;padding:20px;box-shadow:0 8px 20px rgba(0,0,0,.08)}table{width:100%;border-collapse:collapse}table th,table td{padding:12px;text-align:left;font-size:14px}table th{background:#f8f9fa;font-weight:600}table tr{border-bottom:1px solid #eee}.return-btn{padding:6px 12px;font-size:12px;background:#e67e22;color:white;border-radius:6px;text-decoration:none}.return-btn:hover{background:#d35400}.alert-success,.alert-error{padding:10px 15px;border-radius:8px;margin-bottom:15px}.alert-success{background:#d4edda;color:#155724}.alert-error{background:#f8d7da;color:#721c24}.top-actions{display:flex;justify-content:flex-end;margin-bottom:15px}.btn{padding:9px 14px;border:none;border-radius:8px;background:#2f80ed;color:#fff;cursor:pointer}.badge-red{background:#eb5757;color:white;padding:4px 8px;border-radius:6px;font-size:12px}
-</style>
+<link rel="stylesheet" href="admin-theme.css">
 </head>
 <body>
 <div class="wrapper">
 <?php include("../includes/sidebar1.php"); ?>
 <div class="main">
-    <h2>📚 Issued Books</h2>
+  <div class="page-header"><h2>📚 Issued Books</h2>
+    <form method="post"><button class="btn btn-secondary" type="submit" name="send_overdue_notifications"><i class="fas fa-envelope"></i> Send Overdue Emails</button></form>
+  </div>
 
-    <?php if ($success) echo "<div class='alert-success'>{$success}</div>"; ?>
-    <?php if ($error) echo "<div class='alert-error'>{$error}</div>"; ?>
+  <?php if ($success) echo "<div class='alert-success'>{$success}</div>"; ?>
+  <?php if ($error) echo "<div class='alert-error'>{$error}</div>"; ?>
 
-    <div class="top-actions">
-        <form method="post">
-            <button class="btn" type="submit" name="send_overdue_notifications"><i class="fas fa-envelope"></i> Send Overdue Emails</button>
-        </form>
-    </div>
-
-    <div class="table-card">
-        <table>
-            <thead>
-            <tr>
-                <th>Accession No</th>
-                <th>Book Name</th>
-                <th>Issue Date</th>
-                <th>Due Date</th>
-                <th>Current Fine</th>
-                <th>Status</th>
-            </tr>
-            </thead>
-            <tbody>
-            <?php
-            if ($issues && $issues->num_rows > 0) {
-                $today = date('Y-m-d');
-
-                while ($row = $issues->fetch_assoc()) {
-                    $fineInfo = calculate_overdue_fine($conn, $row['due_date'], $today);
-                    $status = "<a href='?return_id={$row['id']}' class='return-btn' onclick=\"return confirm('Mark this book as returned?')\">Return</a>";
-                    $fineText = $fineInfo['fine'] > 0 ? "<span class='badge-red'>₹ {$fineInfo['fine']}</span>" : "₹ 0";
-
-                    echo "<tr>
-                            <td>{$row['accession_no']}</td>
-                            <td>" . htmlspecialchars($row['title']) . "</td>
-                            <td>{$row['issue_date']}</td>
-                            <td>{$row['due_date']}</td>
-                            <td>{$fineText}</td>
-                            <td>{$status}</td>
-                          </tr>";
-                }
-            } else {
-                echo "<tr><td colspan='6'>No issued books found</td></tr>";
-            }
-            ?>
-            </tbody>
-        </table>
-    </div>
+  <div class="table-card">
+    <table>
+      <thead><tr><th>Accession No</th><th>Book Name</th><th>Issue Date</th><th>Due Date</th><th>Current Fine</th><th>Status</th></tr></thead>
+      <tbody>
+      <?php
+      if ($issues && $issues->num_rows > 0) {
+          $today = date('Y-m-d');
+          while ($row = $issues->fetch_assoc()) {
+              $fineInfo = calculate_overdue_fine($conn, $row['due_date'], $today);
+              $status = "<a href='?return_id={$row['id']}' class='link-btn' onclick=\"return confirm('Mark this book as returned?')\">Return</a>";
+              $fineText = $fineInfo['fine'] > 0 ? "<span class='tag-danger'>₹ {$fineInfo['fine']}</span>" : "₹ 0";
+              echo "<tr><td>{$row['accession_no']}</td><td>" . htmlspecialchars($row['title']) . "</td><td>{$row['issue_date']}</td><td>{$row['due_date']}</td><td>{$fineText}</td><td>{$status}</td></tr>";
+          }
+      } else {
+          echo "<tr><td colspan='6'>No issued books found</td></tr>";
+      }
+      ?>
+      </tbody>
+    </table>
+  </div>
 </div>
 </div>
-<script>
-function toggleSidebar(){document.getElementById("sidebar").classList.toggle("collapsed");}
-</script>
-</body>
-</html>
+<script>function toggleSidebar(){document.getElementById("sidebar").classList.toggle("collapsed");}</script>
+</body></html>

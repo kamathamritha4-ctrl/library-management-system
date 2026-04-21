@@ -30,13 +30,43 @@ if (isset($_GET['delete'])) {
 $holidays = $conn->query("SELECT * FROM holidays ORDER BY holiday_date");
 ?>
 <!DOCTYPE html>
-<html><head>
+<html>
+<head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Manage Holidays</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-<style>*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif}body{background:#f4f6f9}.wrapper{display:flex;min-height:100vh}.main{flex:1;padding:28px}.card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 8px 20px rgba(0,0,0,.08)}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}.btn{padding:8px 12px;border:none;border-radius:7px;cursor:pointer;background:#2f80ed;color:white;text-decoration:none}.danger{background:#e74c3c}</style>
-</head><body><div class="wrapper"><?php include("../includes/sidebar1.php"); ?><div class="main"><div class="card"><h2>📅 Manage Government Holidays</h2>
-<form method="post" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;"><input type="date" name="holiday_date" required><input type="text" name="description" placeholder="Holiday description" required><button class="btn" type="submit" name="add_holiday">Add Holiday</button></form>
-<table><thead><tr><th>Date</th><th>Description</th><th>Action</th></tr></thead><tbody>
-<?php if($holidays && $holidays->num_rows>0){ while($row=$holidays->fetch_assoc()){ echo "<tr><td>{$row['holiday_date']}</td><td>".htmlspecialchars($row['description'])."</td><td><a class='btn danger' href='?delete={$row['id']}' onclick=\"return confirm('Delete this holiday?')\">Delete</a></td></tr>"; } } else { echo "<tr><td colspan='3'>No holidays added.</td></tr>"; } ?>
-</tbody></table>
-</div></div></div><script>function toggleSidebar(){document.getElementById('sidebar').classList.toggle('collapsed');}</script></body></html>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="admin-theme.css">
+</head>
+<body>
+<div class="wrapper">
+<?php include("../includes/sidebar1.php"); ?>
+<div class="main">
+  <div class="page-header"><h2>📅 Manage Government Holidays</h2></div>
+  <div class="card">
+    <form method="post" class="actions" style="margin-bottom:18px;">
+      <input type="date" name="holiday_date" required>
+      <input type="text" name="description" placeholder="Holiday description" required style="padding:10px;border:1px solid #ddd;border-radius:8px;min-width:260px;">
+      <button class="btn btn-primary" type="submit" name="add_holiday">Add Holiday</button>
+    </form>
+
+    <div class="table-card" style="box-shadow:none;padding:0;">
+      <table>
+        <thead><tr><th>Date</th><th>Description</th><th>Action</th></tr></thead>
+        <tbody>
+          <?php
+          if($holidays && $holidays->num_rows>0){
+            while($row=$holidays->fetch_assoc()){
+              echo "<tr><td>{$row['holiday_date']}</td><td>".htmlspecialchars($row['description'])."</td><td><a class='link-btn' style='background:#e74c3c' href='?delete={$row['id']}' onclick=\"return confirm('Delete this holiday?')\">Delete</a></td></tr>";
+            }
+          } else {
+            echo "<tr><td colspan='3'>No holidays added.</td></tr>";
+          }
+          ?>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+<script>function toggleSidebar(){document.getElementById('sidebar').classList.toggle('collapsed');}</script>
+</body></html>

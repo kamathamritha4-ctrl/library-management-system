@@ -8,8 +8,10 @@ if(!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
 
 // Delete logic
 if(isset($_GET['delete'])) {
-    $id = $_GET['delete'];
-    $conn->query("DELETE FROM books WHERE id=$id");
+    $id = (int) $_GET['delete'];
+    $stmt = $conn->prepare("DELETE FROM books WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
     header("Location: manage_books.php");
     exit();
 }
@@ -207,11 +209,18 @@ table tr:hover {
 
         <div class="main-header">
             <h2>📚 Manage Books</h2>
-            <a href="add_book.php">
-                <button class="add-btn">
-                    <i class="fas fa-plus"></i> Add Book
-                </button>
-            </a>
+            <div style="display:flex; gap:10px;">
+                <a href="export_books.php">
+                    <button class="add-btn" style="background:#2f80ed;">
+                        <i class="fas fa-file-export"></i> Export CSV
+                    </button>
+                </a>
+                <a href="add_book.php">
+                    <button class="add-btn">
+                        <i class="fas fa-plus"></i> Add Book
+                    </button>
+                </a>
+            </div>
         </div>
 
         <div class="table-card">

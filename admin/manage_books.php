@@ -16,8 +16,18 @@ if(isset($_GET['delete'])) {
     exit();
 }
 
-// Fetch books
-$books = $conn->query("SELECT * FROM books ORDER BY id");
+// Search + Fetch books
+$search = trim($_GET['q'] ?? '');
+
+if ($search !== '') {
+    $like = "%{$search}%";
+    $stmt = $conn->prepare("SELECT * FROM books WHERE accession_no LIKE ? OR title LIKE ? OR author LIKE ? OR category LIKE ? OR publisher LIKE ? ORDER BY id");
+    $stmt->bind_param("sssss", $like, $like, $like, $like, $like);
+    $stmt->execute();
+    $books = $stmt->get_result();
+} else {
+    $books = $conn->query("SELECT * FROM books ORDER BY id");
+}
 ?>
 
 <!DOCTYPE html>
@@ -210,11 +220,6 @@ table tr:hover {
         <div class="main-header">
             <h2>📚 Manage Books</h2>
             <div style="display:flex; gap:10px;">
-                <a href="export_books.php">
-                    <button class="add-btn" style="background:#2f80ed;">
-                        <i class="fas fa-file-export"></i> Export CSV
-                    </button>
-                </a>
                 <a href="add_book.php">
                     <button class="add-btn">
                         <i class="fas fa-plus"></i> Add Book
@@ -223,10 +228,23 @@ table tr:hover {
             </div>
         </div>
 
+        <form method="get" style="display:flex; gap:10px; margin-bottom:16px;">
+            <input type="text" name="q" value="<?php echo htmlspecialchars($search); ?>" placeholder="Search by accession, title, author, category, publisher" style="flex:1; max-width:520px; padding:10px 12px; border:1px solid #d5deeb; border-radius:8px;">
+            <button class="add-btn" type="submit" style="background:#2f80ed;"><i class="fas fa-search"></i> Search</button>
+            <a href="manage_books.php"><button class="add-btn" type="button" style="background:#95a5a6;">Reset</button></a>
+        </form>
+
+        <form method="post" action="export_books.php">
+        <div style="display:flex; justify-content:flex-end; margin-bottom:12px;">
+            <button class="add-btn" type="submit" style="background:#2f80ed;">
+                <i class="fas fa-file-export"></i> Export (Selected / All)
+            </button>
+        </div>
         <div class="table-card">
             <table>
                 <thead>
                     <tr>
+                        <th><input type="checkbox" id="selectAll"></th>
                         <th>Accession No</th>
                         <th>Title</th>
                         <th>Author</th>
@@ -246,6 +264,7 @@ table tr:hover {
                 if($books && $books->num_rows > 0) {
                     while($row = $books->fetch_assoc()) {
                         echo "<tr>
+                                <td><input type='checkbox' name='book_ids[]' value='{$row['id']}'></td>
                                 <td>{$row['accession_no']}</td>
                                 <td>{$row['title']}</td>
                                 <td>{$row['author']}</td>
@@ -267,19 +286,24 @@ table tr:hover {
                               </tr>";
                     }
                 } else {
-                    echo "<tr><td colspan='11'>No books found</td></tr>";
+                    echo "<tr><td colspan='12'>No books found</td></tr>";
                 }
                 ?>
 
                 </tbody>
             </table>
         </div>
+        </form>
 
     </div>
 
 </div>
 
 <script>
+document.getElementById("selectAll")?.addEventListener("change", function(){
+    document.querySelectorAll("input[name=\"book_ids[]\"]").forEach(cb => cb.checked = this.checked);
+});
+
 function toggleSidebar() {
     document.getElementById("sidebar").classList.toggle("collapsed");
 }

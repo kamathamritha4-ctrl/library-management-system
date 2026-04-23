@@ -27,7 +27,22 @@ fputcsv($output, [
     'Remarks'
 ]);
 
-$result = $conn->query("SELECT date_of_accession, accession_no, category, author, title, publisher, year, price, total_copies, quantity, edition, supplier, remarks FROM books ORDER BY accession_no");
+$selectedIds = [];
+if (!empty($_POST['book_ids']) && is_array($_POST['book_ids'])) {
+    $selectedIds = array_values(array_filter(array_map('intval', $_POST['book_ids']), static fn ($id) => $id > 0));
+}
+
+if (!empty($selectedIds)) {
+    $placeholders = implode(',', array_fill(0, count($selectedIds), '?'));
+    $types = str_repeat('i', count($selectedIds));
+
+    $stmt = $conn->prepare("SELECT date_of_accession, accession_no, category, author, title, publisher, year, price, total_copies, quantity, edition, supplier, remarks FROM books WHERE id IN ({$placeholders}) ORDER BY accession_no");
+    $stmt->bind_param($types, ...$selectedIds);
+    $stmt->execute();
+    $result = $stmt->get_result();
+} else {
+    $result = $conn->query("SELECT date_of_accession, accession_no, category, author, title, publisher, year, price, total_copies, quantity, edition, supplier, remarks FROM books ORDER BY accession_no");
+}
 
 if ($result) {
     while ($row = $result->fetch_assoc()) {

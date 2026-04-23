@@ -26,12 +26,12 @@ if ($search !== '') {
 <title>Student Book Search</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-:root{--primary:#4f46e5;--primary2:#4338ca}
+:root{--primary:#E24C24;--primary2:#C93E18;--navy:#1F2940}
 *{box-sizing:border-box}
-body{margin:0;font-family:'Poppins','Segoe UI',Arial,sans-serif;background:radial-gradient(circle at top right,#bfdbfe 0%,#ddd6fe 35%,#f8fafc 78%)}
-.overlay{min-height:100vh;background:rgba(15,23,42,.28);display:flex;flex-direction:column;align-items:center;padding:34px 16px;color:#fff}
+body{margin:0;font-family:'Poppins','Segoe UI',Arial,sans-serif;background:radial-gradient(circle at top right,#ffe9e1 0%,#f7ece8 35%,#f5f7fb 78%)}
+.overlay{min-height:100vh;background:rgba(20,29,48,.22);display:flex;flex-direction:column;align-items:center;padding:34px 16px;color:#fff}
 .header{width:min(1080px,95%);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
-.logout{background:#ef4444;color:white;padding:9px 13px;border-radius:10px;text-decoration:none;font-weight:600}
+.logout{background:#1F2940;color:white;padding:9px 13px;border-radius:10px;text-decoration:none;font-weight:600}
 .search-box{background:rgba(255,255,255,.2);backdrop-filter:blur(9px);padding:18px;border-radius:14px;box-shadow:0 14px 30px rgba(0,0,0,.22);width:min(1080px,95%)}
 .search-row{display:flex;gap:10px;flex-wrap:wrap}
 .search-box input{padding:12px 14px;flex:1;min-width:220px;border:none;border-radius:10px;font-size:15px}
@@ -46,7 +46,7 @@ th,td{padding:12px;border-bottom:1px solid #edf2f7;text-align:left}th{background
 <body>
 <div class="overlay">
     <div class="header">
-        <h2>📘 Student Library Search</h2>
+        <div style="display:flex; align-items:center; gap:10px;"><img src="../assets/trisha-logo.svg" alt="Trisha Logo" style="width:44px;height:44px;border-radius:10px;background:white;object-fit:contain;"><h2>📘 Trisha Student Library Search</h2></div>
         <a class="logout" href="../logout.php">Logout</a>
     </div>
 

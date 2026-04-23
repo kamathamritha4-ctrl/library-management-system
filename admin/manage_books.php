@@ -49,7 +49,7 @@ if ($search !== '') {
 }
 
 body {
-    background: #f4f6f9;
+    background: radial-gradient(circle at 80% 0%,#fff2ed 0,#f8f0eb 35%,#f4f6fb 80%);
 }
 
 .wrapper {
@@ -60,7 +60,7 @@ body {
 /* ===== Sidebar ===== */
 .sidebar {
     width: 240px;
-    background: #2c3e50;
+    background: #1F2940;
     padding: 25px 15px;
     color: white;
     transition: 0.3s ease;
@@ -95,7 +95,7 @@ body {
 }
 
 .sidebar a:hover {
-    background: #34495e;
+    background: #2a3652;
 }
 
 /* Collapsed */
@@ -134,7 +134,7 @@ body {
 }
 
 .add-btn {
-    background: #27ae60;
+    background: #E24C24;
     color: white;
     padding: 10px 18px;
     border: none;
@@ -144,7 +144,7 @@ body {
 }
 
 .add-btn:hover {
-    background: #219150;
+    background: #C93E18;
 }
 
 /* Table Card */
@@ -230,13 +230,13 @@ table tr:hover {
 
         <form method="get" style="display:flex; gap:10px; margin-bottom:16px;">
             <input type="text" name="q" value="<?php echo htmlspecialchars($search); ?>" placeholder="Search by accession, title, author, category, publisher" style="flex:1; max-width:520px; padding:10px 12px; border:1px solid #d5deeb; border-radius:8px;">
-            <button class="add-btn" type="submit" style="background:#2f80ed;"><i class="fas fa-search"></i> Search</button>
-            <a href="manage_books.php"><button class="add-btn" type="button" style="background:#95a5a6;">Reset</button></a>
+            <button class="add-btn" type="submit" style="background:#1F2940;"><i class="fas fa-search"></i> Search</button>
+            <a href="manage_books.php"><button class="add-btn" type="button" style="background:#6b7280;">Reset</button></a>
         </form>
 
         <form method="post" action="export_books.php">
         <div style="display:flex; justify-content:flex-end; margin-bottom:12px;">
-            <button class="add-btn" type="submit" style="background:#2f80ed;">
+            <button class="add-btn" type="submit" style="background:#1F2940;">
                 <i class="fas fa-file-export"></i> Export (Selected / All)
             </button>
         </div>

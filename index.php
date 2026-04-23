@@ -54,12 +54,12 @@ if(isset($_POST['login'])) {
 <title>Library Login</title>
 
 <style>
-:root{--bg:#eef2ff;--card:#ffffff;--text:#1f2937;--muted:#6b7280;--primary:#4f46e5;--primary2:#4338ca;--ring:rgba(79,70,229,.22)}
+:root{--bg:#eef2ff;--card:#ffffff;--text:#1f2937;--muted:#6b7280;--primary:#E24C24;--primary2:#C93E18;--ring:rgba(79,70,229,.22)}
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif}
-body{min-height:100vh;background:radial-gradient(circle at top right,#bfdbfe 0%,#e0e7ff 28%,#f8fafc 72%);display:flex;justify-content:center;align-items:center;position:relative;overflow:hidden}
+body{min-height:100vh;background:radial-gradient(circle at top right,#ffe9e1 0%,#f7ece8 30%,#f5f7fb 72%);display:flex;justify-content:center;align-items:center;position:relative;overflow:hidden}
 body:before,body:after{content:"";position:absolute;border-radius:50%;filter:blur(2px)}
-body:before{width:540px;height:540px;background:linear-gradient(135deg,#6366f1,#22d3ee);top:-180px;right:-140px;opacity:.18}
-body:after{width:460px;height:460px;background:linear-gradient(135deg,#34d399,#3b82f6);bottom:-170px;left:-130px;opacity:.14}
+body:before{width:540px;height:540px;background:linear-gradient(135deg,#f97316,#f59e0b);top:-180px;right:-140px;opacity:.18}
+body:after{width:460px;height:460px;background:linear-gradient(135deg,#1f2940,#334166);bottom:-170px;left:-130px;opacity:.14}
 .shell{width:min(1040px,94vw);display:grid;grid-template-columns:1.1fr .9fr;gap:28px;align-items:center;position:relative;z-index:1}
 .branding{color:var(--text);padding:10px}
 .branding .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(79,70,229,.1);border:1px solid rgba(79,70,229,.14);border-radius:999px;color:#3730a3;font-size:12px;font-weight:600;margin-bottom:16px}
@@ -81,8 +81,9 @@ button:hover{transform:translateY(-2px);box-shadow:0 10px 20px rgba(79,70,229,.2
 <body>
 <div class="shell">
 <div class="branding">
-    <span class="pill">📚 Smart Library Suite</span>
-    <h1>Library Management</h1>
+    <span class="pill">📚 Trisha Library Suite</span>
+    <img src="assets/trisha-logo.svg" alt="Trisha Logo" style="max-width:220px; width:100%; margin:8px 0 12px;">
+    <h1>Trisha Library Management</h1>
     <p>Manage catalog, issue/returns, fines, and student access from one modern dashboard.</p>
 </div>
 <div class="login-container">

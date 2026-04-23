@@ -1,8 +1,6 @@
 <?php
-require_once("../vendor/autoload.php");
 include_once("../config/config.php");
 
-use PhpOffice\PhpSpreadsheet\IOFactory;
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     header("Location: ../index.php");
@@ -14,8 +12,28 @@ $error = "";
 
 if (isset($_POST['import']) && isset($_FILES['file']) && $_FILES['file']['error'] === 0) {
     try {
-        $spreadsheet = IOFactory::load($_FILES['file']['tmp_name']);
-        $rows = $spreadsheet->getActiveSheet()->toArray();
+        $ext = strtolower(pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION));
+        $rows = [];
+
+        if ($ext === 'csv') {
+            if (($handle = fopen($_FILES['file']['tmp_name'], 'r')) !== false) {
+                while (($data = fgetcsv($handle)) !== false) {
+                    $rows[] = $data;
+                }
+                fclose($handle);
+            }
+        } elseif (in_array($ext, ['xlsx', 'xls'], true)) {
+            if (PHP_VERSION_ID < 80200) {
+                throw new RuntimeException('Excel import requires PHP 8.2+ in this setup. Please import CSV or upgrade PHP.');
+            }
+
+            require_once("../vendor/autoload.php");
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($_FILES['file']['tmp_name']);
+            $rows = $spreadsheet->getActiveSheet()->toArray();
+        } else {
+            throw new RuntimeException('Unsupported file format. Please upload CSV, XLSX, or XLS.');
+        }
+
         foreach ($rows as $index => $row) {
             if ($index === 0) continue;
             $accessionNo = (int) ($row[0] ?? 0);
@@ -43,8 +61,9 @@ if (isset($_POST['import']) && isset($_FILES['file']) && $_FILES['file']['error'
             $stmt->bind_param("sisssssdiiissss", $dateOfAccession, $accessionNo, $subject, $author, $title, $publisher, $year, $price, $total, $total, $billNo, $billDate, $supplier, $edition, $remarks);
             $stmt->execute();
         }
+
         $success = "Bulk import completed successfully.";
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         $error = "Import failed: " . $e->getMessage();
     }
 }

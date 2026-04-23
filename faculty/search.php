@@ -22,20 +22,25 @@ if ($search !== '') {
 <html>
 <head>
 <meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title>Faculty Book Search</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body{margin:0;font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(130deg,#1d3557,#457b9d);}
-.overlay{min-height:100vh;background:rgba(0,0,0,.45);display:flex;flex-direction:column;align-items:center;padding:40px 16px;color:#fff}
-.header{width:min(1000px,95%);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}
-.logout{background:#dc3545;color:white;padding:9px 12px;border-radius:8px;text-decoration:none}
-.search-box{background:rgba(255,255,255,.12);backdrop-filter:blur(7px);padding:18px;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,.25);width:min(1000px,95%)}
+:root{--primary:#4f46e5;--primary2:#4338ca}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Poppins','Segoe UI',Arial,sans-serif;background:radial-gradient(circle at top right,#bfdbfe 0%,#ddd6fe 35%,#f8fafc 78%)}
+.overlay{min-height:100vh;background:rgba(15,23,42,.28);display:flex;flex-direction:column;align-items:center;padding:34px 16px;color:#fff}
+.header{width:min(1080px,95%);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.logout{background:#ef4444;color:white;padding:9px 13px;border-radius:10px;text-decoration:none;font-weight:600}
+.search-box{background:rgba(255,255,255,.2);backdrop-filter:blur(9px);padding:18px;border-radius:14px;box-shadow:0 14px 30px rgba(0,0,0,.22);width:min(1080px,95%)}
 .search-row{display:flex;gap:10px;flex-wrap:wrap}
-.search-box input{padding:12px 15px;flex:1;min-width:200px;border:none;border-radius:8px;font-size:15px}
-.search-box button{padding:12px 18px;border:none;border-radius:8px;background:#0d6efd;color:white;font-weight:500;cursor:pointer}
-.container{width:min(1000px,95%);background:white;color:black;padding:20px;border-radius:12px;box-shadow:0 15px 35px rgba(0,0,0,.25);margin-top:20px;overflow:auto}
-table{width:100%;border-collapse:collapse;min-width:640px}th,td{padding:12px;border-bottom:1px solid #eee;text-align:left}th{background:#f8f9fa}
-.badge{padding:5px 10px;border-radius:20px;color:white;font-size:12px;font-weight:500}.available{background:#198754}.not-available{background:#dc3545}
+.search-box input{padding:12px 14px;flex:1;min-width:220px;border:none;border-radius:10px;font-size:15px}
+.search-box button{padding:12px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--primary2));color:white;font-weight:600;cursor:pointer}
+.container{width:min(1080px,95%);background:white;color:#111827;padding:20px;border-radius:14px;box-shadow:0 15px 34px rgba(0,0,0,.2);margin-top:18px;overflow:auto}
+.container h3{margin:0 0 10px}
+table{width:100%;border-collapse:collapse;min-width:640px}
+th,td{padding:12px;border-bottom:1px solid #edf2f7;text-align:left}th{background:#f8fafc;color:#334155}
+.badge{padding:5px 10px;border-radius:20px;color:white;font-size:12px;font-weight:600}.available{background:#16a34a}.not-available{background:#dc2626}
 </style>
 </head>
 <body>

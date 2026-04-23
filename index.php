@@ -50,165 +50,43 @@ if(isset($_POST['login'])) {
 <html>
 <head>
 <meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <title>Library Login</title>
 
 <style>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Poppins', sans-serif;
-}
-
-body {
-    height: 100vh;
-    background: #f4f6f9;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    overflow: hidden;
-}
-
-/* Decorative background shapes */
-body::before {
-    content: "";
-    position: absolute;
-    width: 600px;
-    height: 600px;
-    background: linear-gradient(135deg, #2f80ed, #56ccf2);
-    border-radius: 50%;
-    top: -150px;
-    right: -150px;
-    opacity: 0.15;
-}
-
-body::after {
-    content: "";
-    position: absolute;
-    width: 500px;
-    height: 500px;
-    background: linear-gradient(135deg, #27ae60, #6fcf97);
-    border-radius: 50%;
-    bottom: -150px;
-    left: -150px;
-    opacity: 0.12;
-}
-
-/* Login Card */
-.login-container {
-    position: relative;
-    background: white;
-    width: 420px;
-    padding: 45px;
-    border-radius: 20px;
-    box-shadow: 0 25px 60px rgba(0,0,0,0.12);
-    z-index: 1;
-    animation: fadeIn 0.6s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(25px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.login-container h2 {
-    text-align: center;
-    margin-bottom: 30px;
-    font-weight: 600;
-    color: #2c3e50;
-}
-
-.login-container h2::after {
-    content: "";
-    display: block;
-    width: 70px;
-    height: 4px;
-    background: #2f80ed;
-    margin: 12px auto 0;
-    border-radius: 10px;
-}
-
-.form-group {
-    margin-bottom: 20px;
-}
-
-label {
-    display: block;
-    margin-bottom: 8px;
-    font-size: 14px;
-    color: #555;
-}
-
-input, select {
-    width: 100%;
-    padding: 12px;
-    border-radius: 12px;
-    border: 1px solid #ddd;
-    font-size: 14px;
-    outline: none;
-    transition: 0.3s;
-    background: #f9fafc;
-}
-
-input:focus, select:focus {
-    border-color: #2f80ed;
-    box-shadow: 0 0 0 3px rgba(47,128,237,0.15);
-    background: white;
-}
-
-button {
-    width: 100%;
-    padding: 14px;
-    background: linear-gradient(135deg, #2f80ed, #1f6ed4);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    font-size: 15px;
-    font-weight: 500;
-    transition: 0.3s;
-}
-
-button:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 20px rgba(47,128,237,0.3);
-}
-
-.error {
-    color: #e74c3c;
-    text-align: center;
-    margin-bottom: 15px;
-}
-.branding {
-    position: absolute;
-    left: 80px;
-    top: 45%;
-    transform: translateY(-50%);
-    color: #2c3e50;
-}
-
-.branding h1 {
-    font-size: 32px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    letter-spacing: 1px;
-}
-
-.branding p {
-    font-size: 14px;
-    color: #6c757d;
-}</style>
+:root{--bg:#eef2ff;--card:#ffffff;--text:#1f2937;--muted:#6b7280;--primary:#E24C24;--primary2:#C93E18;--ring:rgba(79,70,229,.22)}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif}
+body{min-height:100vh;background:radial-gradient(circle at top right,#ffe9e1 0%,#f7ece8 30%,#f5f7fb 72%);display:flex;justify-content:center;align-items:center;position:relative;overflow:hidden}
+body:before,body:after{content:"";position:absolute;border-radius:50%;filter:blur(2px)}
+body:before{width:540px;height:540px;background:linear-gradient(135deg,#f97316,#f59e0b);top:-180px;right:-140px;opacity:.18}
+body:after{width:460px;height:460px;background:linear-gradient(135deg,#1f2940,#334166);bottom:-170px;left:-130px;opacity:.14}
+.shell{width:min(1040px,94vw);display:grid;grid-template-columns:1.1fr .9fr;gap:28px;align-items:center;position:relative;z-index:1}
+.branding{color:var(--text);padding:10px}
+.branding .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(79,70,229,.1);border:1px solid rgba(79,70,229,.14);border-radius:999px;color:#3730a3;font-size:12px;font-weight:600;margin-bottom:16px}
+.branding h1{font-size:40px;line-height:1.1;margin-bottom:10px}
+.branding p{color:var(--muted);font-size:15px;max-width:460px}
+.login-container{background:var(--card);padding:34px;border-radius:22px;box-shadow:0 20px 45px rgba(15,23,42,.14);border:1px solid rgba(255,255,255,.55)}
+.login-container h2{text-align:center;margin-bottom:24px;font-weight:700;color:var(--text)}
+.form-group{margin-bottom:16px}
+label{display:block;margin-bottom:7px;font-size:13px;color:#4b5563;font-weight:500}
+input,select{width:100%;padding:12px 13px;border-radius:11px;border:1px solid #dbe3f3;background:#f8fafc;font-size:14px;outline:none;transition:.2s}
+input:focus,select:focus{border-color:var(--primary);background:#fff;box-shadow:0 0 0 4px var(--ring)}
+button{width:100%;padding:13px;background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;border:none;border-radius:12px;cursor:pointer;font-size:15px;font-weight:600;transition:.22s}
+button:hover{transform:translateY(-2px);box-shadow:0 10px 20px rgba(79,70,229,.28)}
+.error{color:#dc2626;text-align:center;margin-bottom:13px;font-size:13px}
+@media(max-width:900px){.shell{grid-template-columns:1fr;gap:14px}.branding{text-align:center}.branding p{margin:auto}.branding h1{font-size:32px}}
+</style>
 </head>
 
 <body>
-
+<div class="shell">
 <div class="branding">
-    <h1>Library Management</h1>
-    <p>Academic Resource Portal</p>
+    <span class="pill">📚 Trisha Library Suite</span>
+    <img src="assets/trisha-logo.svg" alt="Trisha Logo" style="max-width:220px; width:100%; margin:8px 0 12px;">
+    <h1>Trisha Library Management</h1>
+    <p>Manage catalog, issue/returns, fines, and student access from one modern dashboard.</p>
 </div>
-<div class="right-panel">
-    <div class="login-container">
+<div class="login-container">
         <h2>Login to Continue</h2>
 
         <?php 

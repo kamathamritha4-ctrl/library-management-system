@@ -1,266 +1,76 @@
 <?php
 include_once("../config/config.php");
 
-if(!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
+if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     header("Location: ../index.php");
     exit();
 }
 
-if(!isset($_GET['id'])) {
+$id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+if ($id <= 0) {
     header("Location: manage_books.php");
     exit();
 }
 
-$id = intval($_GET['id']);
-
-// Fetch book data
 $stmt = $conn->prepare("SELECT * FROM books WHERE id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();
 $result = $stmt->get_result();
-
-if($result->num_rows != 1) {
+if ($result->num_rows !== 1) {
     header("Location: manage_books.php");
     exit();
 }
-
 $book = $result->fetch_assoc();
+$error = "";
 
-// Update logic
-if(isset($_POST['update'])) {
+if (isset($_POST['update'])) {
+    $dateOfAccession = $_POST['date_of_accession'];
+    $accessionNo = (int) $_POST['accession_no'];
+    $subject = trim($_POST['subject']);
+    $author = trim($_POST['author']);
+    $title = trim($_POST['title']);
+    $publisher = trim($_POST['publisher']);
+    $year = $_POST['year'] !== '' ? (int) $_POST['year'] : null;
+    $price = $_POST['price'] !== '' ? (float) $_POST['price'] : 0;
+    $total = (int) $_POST['total_copies'];
+    $quantity = (int) $_POST['quantity'];
+    $billNo = trim($_POST['bill_no']);
+    $billDate = $_POST['bill_date'] ?: null;
+    $supplier = trim($_POST['supplier']);
+    $edition = trim($_POST['edition']);
+    $remarks = trim($_POST['remarks']);
 
-    $accession_no = $_POST['accession_no'];
-    $title = $_POST['title'];
-    $author = $_POST['author'];
-    $category = $_POST['category'];
-    $publisher = $_POST['publisher'];
-    $edition = $_POST['edition'];
-    $price = $_POST['price'];
-    $total = $_POST['total_copies'];
-    $quantity = $_POST['quantity'];
-
-    $update = $conn->prepare("
-        UPDATE books SET
-        accession_no=?,
-        title=?,
-        author=?,
-        category=?,
-        publisher=?,
-        edition=?,
-        price=?,
-        total_copies=?,
-        quantity=?
-        WHERE id=?
-    ");
-
-    $update->bind_param(
-        "isssssiiii",
-        $accession_no,
-        $title,
-        $author,
-        $category,
-        $publisher,
-        $edition,
-        $price,
-        $total,
-        $quantity,
-        $id
-    );
-
-    $update->execute();
-
-    header("Location: manage_books.php");
-    exit();
+    $dup = $conn->prepare("SELECT id FROM books WHERE accession_no = ? AND id <> ?");
+    $dup->bind_param("ii", $accessionNo, $id);
+    $dup->execute();
+    if ($dup->get_result()->num_rows > 0) {
+        $error = "Accession number already used by another book.";
+    } else {
+        $update = $conn->prepare("UPDATE books SET date_of_accession=?, accession_no=?, category=?, author=?, title=?, publisher=?, year=?, price=?, total_copies=?, quantity=?, bill_no=?, bill_date=?, supplier=?, edition=?, remarks=? WHERE id=?");
+        $update->bind_param("sisssssdiiissssi", $dateOfAccession, $accessionNo, $subject, $author, $title, $publisher, $year, $price, $total, $quantity, $billNo, $billDate, $supplier, $edition, $remarks, $id);
+        $update->execute();
+        header("Location: manage_books.php");
+        exit();
+    }
 }
 ?>
-
 <!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Edit Book</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<html><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Edit Book</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
-<style>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Poppins', sans-serif;
-}
-
-body {
-    display: flex;
-    min-height: 100vh;
-    background: #f4f6f9;
-}
-
-/* Sidebar */
-.sidebar {
-    width: 240px;
-    background: #2c3e50;
-    padding: 25px 15px;
-    color: white;
-}
-
-.sidebar h3 {
-    text-align: center;
-    margin-bottom: 30px;
-}
-
-.sidebar a {
-    display: block;
-    padding: 12px 15px;
-    margin-bottom: 10px;
-    text-decoration: none;
-    color: #ecf0f1;
-    border-radius: 8px;
-    transition: 0.3s;
-}
-
-.sidebar a:hover {
-    background: #34495e;
-}
-
-/* Main */
-.main {
-    flex: 1;
-    padding: 40px;
-}
-
-.card {
-    background: white;
-    border-radius: 15px;
-    padding: 35px;
-    max-width: 750px;
-    margin: auto;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-}
-
-.card h2 {
-    margin-bottom: 25px;
-    color: #333;
-}
-
-/* Form */
-.form-group {
-    margin-bottom: 18px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 6px;
-    font-weight: 500;
-    font-size: 14px;
-}
-
-.form-group input {
-    width: 100%;
-    padding: 10px 12px;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-    font-size: 14px;
-    transition: 0.3s;
-}
-
-.form-group input:focus {
-    border-color: #3498db;
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(52,152,219,0.2);
-}
-
-/* Button */
-.btn {
-    margin-top: 15px;
-    padding: 10px 20px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    font-weight: 500;
-    background: #f39c12;
-    color: white;
-    transition: 0.3s;
-}
-
-.btn:hover {
-    background: #d68910;
-}
-</style>
-</head>
-
-<body>
-
-<div class="sidebar">
-    <h3>Admin Panel</h3>
-    <a href="dashboard.php"><i class="fas fa-chart-line"></i> Dashboard</a>
-    <a href="manage_books.php"><i class="fas fa-book"></i> Manage Books</a>
-    <a href="add_book.php"><i class="fas fa-plus"></i> Add Book</a>
-    <a href="issue_book.php"><i class="fas fa-hand-holding"></i> Issue Book</a>
-    <a href="issued_book.php"><i class="fas fa-clipboard-list"></i> Issued Books</a>
-    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
-</div>
-
-<div class="main">
-    <div class="card">
-        <h2>✏️ Edit Book</h2>
-
-        <form method="post">
-
-            <div class="form-group">
-                <label>Accession No</label>
-                <input type="number" name="accession_no" value="<?php echo $book['accession_no']; ?>" required>
-            </div>
-
-            <div class="form-group">
-                <label>Title</label>
-                <input type="text" name="title" value="<?php echo $book['title']; ?>" required>
-            </div>
-
-            <div class="form-group">
-                <label>Author</label>
-                <input type="text" name="author" value="<?php echo $book['author']; ?>" required>
-            </div>
-
-            <div class="form-group">
-                <label>Category</label>
-                <input type="text" name="category" value="<?php echo $book['category']; ?>" required>
-            </div>
-
-            <div class="form-group">
-                <label>Publisher</label>
-                <input type="text" name="publisher" value="<?php echo $book['publisher']; ?>" required>
-            </div>
-
-            <div class="form-group">
-                <label>Edition</label>
-                <input type="text" name="edition" value="<?php echo $book['edition']; ?>">
-            </div>
-
-            <div class="form-group">
-                <label>Price</label>
-                <input type="number" step="0.01" name="price" value="<?php echo $book['price']; ?>">
-            </div>
-
-            <div class="form-group">
-                <label>Total Copies</label>
-                <input type="number" name="total_copies" value="<?php echo $book['total_copies']; ?>">
-            </div>
-
-            <div class="form-group">
-                <label>Available Quantity</label>
-                <input type="number" name="quantity" value="<?php echo $book['quantity']; ?>">
-            </div>
-
-            <button type="submit" name="update" class="btn">
-                <i class="fas fa-save"></i> Update Book
-            </button>
-
-        </form>
-    </div>
-</div>
-
-</body>
-</html>
+<link rel="stylesheet" href="admin-theme.css">
+</head><body><div class="wrapper"><?php include("../includes/sidebar1.php"); ?><div class="main">
+<div class="page-header"><h2>✏️ Edit Book</h2></div>
+<div class="card"><?php if($error) echo "<div class='alert-error'>{$error}</div>"; ?><form method="post">
+<div class="row"><div class="form-group"><label>Date of Accession</label><input type="date" name="date_of_accession" value="<?php echo htmlspecialchars($book['date_of_accession']); ?>" required></div><div class="form-group"><label>Accession No</label><input type="number" name="accession_no" value="<?php echo (int)$book['accession_no']; ?>" required></div></div>
+<div class="row"><div class="form-group"><label>Subject</label><input type="text" name="subject" value="<?php echo htmlspecialchars($book['category']); ?>" required></div><div class="form-group"><label>Author</label><input type="text" name="author" value="<?php echo htmlspecialchars($book['author']); ?>" required></div></div>
+<div class="row"><div class="form-group"><label>Title & Volume</label><input type="text" name="title" value="<?php echo htmlspecialchars($book['title']); ?>" required></div><div class="form-group"><label>Publisher</label><input type="text" name="publisher" value="<?php echo htmlspecialchars($book['publisher']); ?>"></div></div>
+<div class="row"><div class="form-group"><label>Year</label><input type="number" name="year" value="<?php echo htmlspecialchars((string)$book['year']); ?>"></div><div class="form-group"><label>Price</label><input type="number" step="0.01" name="price" value="<?php echo htmlspecialchars((string)$book['price']); ?>"></div></div>
+<div class="row"><div class="form-group"><label>Total Copies</label><input type="number" name="total_copies" value="<?php echo (int)$book['total_copies']; ?>"></div><div class="form-group"><label>Available Quantity</label><input type="number" name="quantity" value="<?php echo (int)$book['quantity']; ?>"></div></div>
+<div class="row"><div class="form-group"><label>Bill No</label><input type="text" name="bill_no" value="<?php echo htmlspecialchars((string)$book['bill_no']); ?>"></div><div class="form-group"><label>Bill Date</label><input type="date" name="bill_date" value="<?php echo htmlspecialchars((string)$book['bill_date']); ?>"></div></div>
+<div class="row"><div class="form-group"><label>Supplier</label><input type="text" name="supplier" value="<?php echo htmlspecialchars((string)$book['supplier']); ?>"></div><div class="form-group"><label>Edition</label><input type="text" name="edition" value="<?php echo htmlspecialchars((string)$book['edition']); ?>"></div></div>
+<div class="form-group"><label>Remarks</label><textarea name="remarks" rows="2"><?php echo htmlspecialchars((string)$book['remarks']); ?></textarea></div>
+<div class="actions"><button type="submit" name="update" class="btn btn-primary">Update Book</button></div></form></div></div></div>
+<script>function toggleSidebar(){document.getElementById('sidebar').classList.toggle('collapsed');}</script>
+</body></html>

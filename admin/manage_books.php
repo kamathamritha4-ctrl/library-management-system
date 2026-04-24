@@ -8,14 +8,26 @@ if(!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
 
 // Delete logic
 if(isset($_GET['delete'])) {
-    $id = $_GET['delete'];
-    $conn->query("DELETE FROM books WHERE id=$id");
+    $id = (int) $_GET['delete'];
+    $stmt = $conn->prepare("DELETE FROM books WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
     header("Location: manage_books.php");
     exit();
 }
 
-// Fetch books
-$books = $conn->query("SELECT * FROM books ORDER BY id");
+// Search + Fetch books
+$search = trim($_GET['q'] ?? '');
+
+if ($search !== '') {
+    $like = "%{$search}%";
+    $stmt = $conn->prepare("SELECT * FROM books WHERE accession_no LIKE ? OR title LIKE ? OR author LIKE ? OR category LIKE ? OR publisher LIKE ? ORDER BY id");
+    $stmt->bind_param("sssss", $like, $like, $like, $like, $like);
+    $stmt->execute();
+    $books = $stmt->get_result();
+} else {
+    $books = $conn->query("SELECT * FROM books ORDER BY id");
+}
 ?>
 
 <!DOCTYPE html>
@@ -37,7 +49,7 @@ $books = $conn->query("SELECT * FROM books ORDER BY id");
 }
 
 body {
-    background: #f4f6f9;
+    background: radial-gradient(circle at 80% 0%,#fff2ed 0,#f8f0eb 35%,#f4f6fb 80%);
 }
 
 .wrapper {
@@ -48,7 +60,7 @@ body {
 /* ===== Sidebar ===== */
 .sidebar {
     width: 240px;
-    background: #2c3e50;
+    background: #1F2940;
     padding: 25px 15px;
     color: white;
     transition: 0.3s ease;
@@ -83,7 +95,7 @@ body {
 }
 
 .sidebar a:hover {
-    background: #34495e;
+    background: #2a3652;
 }
 
 /* Collapsed */
@@ -122,7 +134,7 @@ body {
 }
 
 .add-btn {
-    background: #27ae60;
+    background: #E24C24;
     color: white;
     padding: 10px 18px;
     border: none;
@@ -132,7 +144,7 @@ body {
 }
 
 .add-btn:hover {
-    background: #219150;
+    background: #C93E18;
 }
 
 /* Table Card */
@@ -207,17 +219,32 @@ table tr:hover {
 
         <div class="main-header">
             <h2>📚 Manage Books</h2>
-            <a href="add_book.php">
-                <button class="add-btn">
-                    <i class="fas fa-plus"></i> Add Book
-                </button>
-            </a>
+            <div style="display:flex; gap:10px;">
+                <a href="add_book.php">
+                    <button class="add-btn">
+                        <i class="fas fa-plus"></i> Add Book
+                    </button>
+                </a>
+            </div>
         </div>
 
+        <form method="get" style="display:flex; gap:10px; margin-bottom:16px;">
+            <input type="text" name="q" value="<?php echo htmlspecialchars($search); ?>" placeholder="Search by accession, title, author, category, publisher" style="flex:1; max-width:520px; padding:10px 12px; border:1px solid #d5deeb; border-radius:8px;">
+            <button class="add-btn" type="submit" style="background:#1F2940;"><i class="fas fa-search"></i> Search</button>
+            <a href="manage_books.php"><button class="add-btn" type="button" style="background:#6b7280;">Reset</button></a>
+        </form>
+
+        <form method="post" action="export_books.php">
+        <div style="display:flex; justify-content:flex-end; margin-bottom:12px;">
+            <button class="add-btn" type="submit" style="background:#1F2940;">
+                <i class="fas fa-file-export"></i> Export (Selected / All)
+            </button>
+        </div>
         <div class="table-card">
             <table>
                 <thead>
                     <tr>
+                        <th><input type="checkbox" id="selectAll"></th>
                         <th>Accession No</th>
                         <th>Title</th>
                         <th>Author</th>
@@ -237,6 +264,7 @@ table tr:hover {
                 if($books && $books->num_rows > 0) {
                     while($row = $books->fetch_assoc()) {
                         echo "<tr>
+                                <td><input type='checkbox' name='book_ids[]' value='{$row['id']}'></td>
                                 <td>{$row['accession_no']}</td>
                                 <td>{$row['title']}</td>
                                 <td>{$row['author']}</td>
@@ -258,19 +286,24 @@ table tr:hover {
                               </tr>";
                     }
                 } else {
-                    echo "<tr><td colspan='11'>No books found</td></tr>";
+                    echo "<tr><td colspan='12'>No books found</td></tr>";
                 }
                 ?>
 
                 </tbody>
             </table>
         </div>
+        </form>
 
     </div>
 
 </div>
 
 <script>
+document.getElementById("selectAll")?.addEventListener("change", function(){
+    document.querySelectorAll("input[name=\"book_ids[]\"]").forEach(cb => cb.checked = this.checked);
+});
+
 function toggleSidebar() {
     document.getElementById("sidebar").classList.toggle("collapsed");
 }

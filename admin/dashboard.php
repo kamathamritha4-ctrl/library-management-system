@@ -56,7 +56,7 @@ $students = $conn->query("
 }
 
 body {
-    background: #f4f6f9;
+    background: radial-gradient(circle at 80% 0%,#fff2ed 0,#f8f0eb 35%,#f4f6fb 80%);
 }
 
 .wrapper {
@@ -67,7 +67,7 @@ body {
 /* ===== Sidebar ===== */
 .sidebar {
     width: 240px;
-    background: #2c3e50;
+    background: #1F2940;
     padding: 25px 15px;
     color: white;
     transition: 0.3s ease;
@@ -102,7 +102,7 @@ body {
 }
 
 .sidebar a:hover {
-    background: #34495e;
+    background: #2a3652;
 }
 
 /* Collapsed state */
@@ -167,10 +167,10 @@ body {
     font-size: 30px;
 }
 
-.blue { border-left: 5px solid #2f80ed; }
-.green { border-left: 5px solid #27ae60; }
-.yellow { border-left: 5px solid #f2c94c; }
-.red { border-left: 5px solid #eb5757; }
+.blue { border-left: 5px solid #E24C24; }
+.green { border-left: 5px solid #1F2940; }
+.yellow { border-left: 5px solid #f59e0b; }
+.red { border-left: 5px solid #C93E18; }
 
 </style>
 </head>

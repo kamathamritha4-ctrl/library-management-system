@@ -46,7 +46,7 @@ th,td{padding:12px;border-bottom:1px solid #edf2f7;text-align:left}th{background
 <body>
 <div class="overlay">
     <div class="header">
-        <div style="display:flex; align-items:center; gap:10px;"><img src="../assets/trisha-logo.svg" alt="Trisha Logo" style="width:44px;height:44px;border-radius:10px;background:white;object-fit:contain;"><h2>📘 Trisha Student Library Search</h2></div>
+        <div style="display:flex; align-items:center; gap:10px;"><img src="https://trishaedu.com/Trisha-Logo.png" alt="Trisha Logo" style="width:44px;height:44px;border-radius:10px;background:white;object-fit:contain;"><h2>📘 Trisha Student Library Search</h2></div>
         <a class="logout" href="../logout.php">Logout</a>
     </div>
 

@@ -54,27 +54,25 @@ if(isset($_POST['login'])) {
 <title>Library Login</title>
 
 <style>
-:root{--bg:#eef2ff;--card:#ffffff;--text:#1f2937;--muted:#6b7280;--primary:#E24C24;--primary2:#C93E18;--ring:rgba(79,70,229,.22)}
+:root{--primary:#E24C24;--primary2:#C93E18;--navy:#1F2940;--muted:#64748b}
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif}
-body{min-height:100vh;background:radial-gradient(circle at top right,#ffe9e1 0%,#f7ece8 30%,#f5f7fb 72%);display:flex;justify-content:center;align-items:center;position:relative;overflow:hidden}
-body:before,body:after{content:"";position:absolute;border-radius:50%;filter:blur(2px)}
-body:before{width:540px;height:540px;background:linear-gradient(135deg,#f97316,#f59e0b);top:-180px;right:-140px;opacity:.18}
-body:after{width:460px;height:460px;background:linear-gradient(135deg,#1f2940,#334166);bottom:-170px;left:-130px;opacity:.14}
-.shell{width:min(1040px,94vw);display:grid;grid-template-columns:1.1fr .9fr;gap:28px;align-items:center;position:relative;z-index:1}
-.branding{color:var(--text);padding:10px}
-.branding .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(79,70,229,.1);border:1px solid rgba(79,70,229,.14);border-radius:999px;color:#3730a3;font-size:12px;font-weight:600;margin-bottom:16px}
-.branding h1{font-size:40px;line-height:1.1;margin-bottom:10px}
-.branding p{color:var(--muted);font-size:15px;max-width:460px}
-.login-container{background:var(--card);padding:34px;border-radius:22px;box-shadow:0 20px 45px rgba(15,23,42,.14);border:1px solid rgba(255,255,255,.55)}
-.login-container h2{text-align:center;margin-bottom:24px;font-weight:700;color:var(--text)}
-.form-group{margin-bottom:16px}
-label{display:block;margin-bottom:7px;font-size:13px;color:#4b5563;font-weight:500}
-input,select{width:100%;padding:12px 13px;border-radius:11px;border:1px solid #dbe3f3;background:#f8fafc;font-size:14px;outline:none;transition:.2s}
-input:focus,select:focus{border-color:var(--primary);background:#fff;box-shadow:0 0 0 4px var(--ring)}
-button{width:100%;padding:13px;background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;border:none;border-radius:12px;cursor:pointer;font-size:15px;font-weight:600;transition:.22s}
-button:hover{transform:translateY(-2px);box-shadow:0 10px 20px rgba(79,70,229,.28)}
-.error{color:#dc2626;text-align:center;margin-bottom:13px;font-size:13px}
-@media(max-width:900px){.shell{grid-template-columns:1fr;gap:14px}.branding{text-align:center}.branding p{margin:auto}.branding h1{font-size:32px}}
+body{min-height:100vh;background:linear-gradient(90deg,#f1f3fa 0 63%,#f7e6dc 63% 100%);display:flex;justify-content:center;align-items:center;overflow:hidden;position:relative}
+body:before{content:"";position:absolute;left:-120px;bottom:-140px;width:360px;height:360px;border-radius:50%;background:#c8cfde}
+body:after{content:"";position:absolute;right:-80px;top:-80px;width:260px;height:260px;border-radius:50%;background:#f3d7ba;opacity:.95}
+.shell{width:min(1200px,94vw);display:grid;grid-template-columns:1fr 480px;gap:44px;align-items:center;position:relative;z-index:1}
+.branding{padding:10px 20px;color:#1f2937}
+.pill{display:inline-block;padding:8px 14px;background:#d7dbef;color:#5255af;border-radius:999px;font-size:12px;font-weight:600;margin-bottom:16px}
+.logo-card{display:inline-flex;align-items:center;background:white;padding:10px 16px;border-radius:12px;box-shadow:0 6px 20px rgba(15,23,42,.08);margin-bottom:16px}
+.logo-card img{height:54px;width:auto;display:block}
+.branding h1{font-size:58px;line-height:1.05;color:#1f2a3f;margin-bottom:12px;max-width:480px}
+.branding p{font-size:34px;color:var(--muted);max-width:560px}
+.login-container{background:white;padding:34px;border-radius:20px;box-shadow:0 22px 34px rgba(15,23,42,.14)}
+.login-container h2{text-align:center;font-size:42px;color:#1f2a3f;margin-bottom:22px}
+.form-group{margin-bottom:15px}label{display:block;font-size:14px;color:#4b5563;margin-bottom:6px;font-weight:500}
+input,select{width:100%;padding:13px 14px;border-radius:12px;border:1px solid #d9dfeb;background:#edf1fb;font-size:14px}
+button{width:100%;padding:13px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--primary2));color:white;font-weight:700;font-size:18px;cursor:pointer;margin-top:4px}
+.error{color:#dc2626;text-align:center;margin-bottom:12px;font-size:13px}
+@media(max-width:1024px){.shell{grid-template-columns:1fr;gap:18px}.branding h1{font-size:42px}.branding p{font-size:24px}.login-container h2{font-size:36px}.pill{font-size:16px}label,input,select,button{font-size:18px}}
 </style>
 </head>
 
@@ -82,8 +80,9 @@ button:hover{transform:translateY(-2px);box-shadow:0 10px 20px rgba(79,70,229,.2
 <div class="shell">
 <div class="branding">
     <span class="pill">📚 Trisha Library Suite</span>
-    <img src="assets/trisha-logo.svg" alt="Trisha Logo" style="max-width:220px; width:100%; margin:8px 0 12px;">
-    <h1>Trisha Library Management</h1>
+    <div class="logo-card"><img src="https://trishaedu.com/Trisha-Logo.png" alt="Trisha Logo"></div>
+    <h1>Trisha Library
+Management</h1>
     <p>Manage catalog, issue/returns, fines, and student access from one modern dashboard.</p>
 </div>
 <div class="login-container">

@@ -2,7 +2,7 @@
 
     <div class="sidebar-header">
         <div style="display:flex; align-items:center; gap:10px;">
-            <img src="../assets/trisha-logo.svg" alt="Trisha Logo" style="width:38px; height:38px; border-radius:8px; object-fit:contain; background:white;">
+            <img src="https://trishaedu.com/Trisha-Logo.png" alt="Trisha Logo" style="width:38px; height:38px; border-radius:8px; object-fit:contain; background:white;">
             <h3 style="line-height:1.1; font-size:16px;">Trisha<br><span style="font-size:12px; font-weight:500; opacity:.85;">Library Admin</span></h3>
         </div>
         <button class="collapse-btn" onclick="toggleSidebar()">

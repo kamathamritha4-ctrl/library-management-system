@@ -64,15 +64,15 @@ body:after{content:"";position:absolute;right:-80px;top:-80px;width:260px;height
 .pill{display:inline-block;padding:8px 14px;background:#d7dbef;color:#5255af;border-radius:999px;font-size:12px;font-weight:600;margin-bottom:16px}
 .logo-card{display:inline-flex;align-items:center;background:white;padding:10px 16px;border-radius:12px;box-shadow:0 6px 20px rgba(15,23,42,.08);margin-bottom:16px}
 .logo-card img{height:54px;width:auto;display:block}
-.branding h1{font-size:64px;line-height:1.05;color:#1f2a3f;margin-bottom:12px;max-width:480px}
-.branding p{font-size:30px;color:var(--muted);max-width:560px}
+.branding h1{font-size:58px;line-height:1.05;color:#1f2a3f;margin-bottom:12px;max-width:480px}
+.branding p{font-size:34px;color:var(--muted);max-width:560px}
 .login-container{background:white;padding:34px;border-radius:20px;box-shadow:0 22px 34px rgba(15,23,42,.14)}
-.login-container h2{text-align:center;font-size:46px;color:#1f2a3f;margin-bottom:22px}
-.form-group{margin-bottom:15px}label{display:block;font-size:15px;color:#4b5563;margin-bottom:6px;font-weight:500}
-input,select{width:100%;padding:14px 14px;border-radius:12px;border:1px solid #d9dfeb;background:#edf1fb;font-size:15px}
-button{width:100%;padding:13px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--primary2));color:white;font-weight:700;font-size:20px;cursor:pointer;margin-top:4px}
+.login-container h2{text-align:center;font-size:42px;color:#1f2a3f;margin-bottom:22px}
+.form-group{margin-bottom:15px}label{display:block;font-size:14px;color:#4b5563;margin-bottom:6px;font-weight:500}
+input,select{width:100%;padding:13px 14px;border-radius:12px;border:1px solid #d9dfeb;background:#edf1fb;font-size:14px}
+button{width:100%;padding:13px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--primary2));color:white;font-weight:700;font-size:18px;cursor:pointer;margin-top:4px}
 .error{color:#dc2626;text-align:center;margin-bottom:12px;font-size:13px}
-@media(max-width:1024px){.shell{grid-template-columns:1fr;gap:18px}.branding h1{font-size:46px}.branding p{font-size:24px}.login-container h2{font-size:36px}.pill{font-size:16px}label,input,select,button{font-size:20px}}
+@media(max-width:1024px){.shell{grid-template-columns:1fr;gap:18px}.branding h1{font-size:42px}.branding p{font-size:24px}.login-container h2{font-size:36px}.pill{font-size:16px}label,input,select,button{font-size:18px}}
 </style>
 </head>
 

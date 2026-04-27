@@ -20,16 +20,17 @@ function redirectByRole(string $role): void {
 if (isset($_POST['login'])) {
     $identifier = trim($_POST['identifier'] ?? '');
     $password = $_POST['password'] ?? '';
+    $role = trim($_POST['role'] ?? '');
 
-    if ($identifier === '' || $password === '') {
-        $error = "Username/email and password are required.";
+    if ($identifier === '' || $password === '' || $role === '') {
+        $error = "Role, username/email and password are required.";
     } else {
         $stmt = $conn->prepare(
-            "SELECT id, name, email, password, role FROM users WHERE name = ? OR email = ? LIMIT 1"
+            "SELECT id, name, email, password, role FROM users WHERE (name = ? OR email = ?) AND role = ? LIMIT 1"
         );
 
         if ($stmt) {
-            $stmt->bind_param("ss", $identifier, $identifier);
+$stmt->bind_param("sss", $identifier, $identifier, $role);
             $stmt->execute();
             $result = $stmt->get_result();
             $user = $result ? $result->fetch_assoc() : null;
@@ -277,6 +278,16 @@ Management</h1>
             </form>
         <?php else: ?>
             <form method="post">
+                <div class="form-group">
+                    <label>Login As</label>
+                    <select name="role" required>
+                        <option value="">Select Role</option>
+                        <option value="admin">Admin</option>
+                        <option value="faculty">Faculty</option>
+                        <option value="student">Student</option>
+                    </select>
+                </div>
+
                 <div class="form-group">
                     <label>Username or Email</label>
                     <input type="text" name="identifier" required>

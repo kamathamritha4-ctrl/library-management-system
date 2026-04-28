@@ -17,6 +17,47 @@ function redirectByRole(string $role): void {
     exit();
 }
 
+function resolveUserNameColumn(mysqli $conn): ?string {
+    $nameColumn = null;
+
+    $checkName = $conn->query("SHOW COLUMNS FROM users LIKE 'name'");
+    if ($checkName && $checkName->num_rows > 0) {
+        $nameColumn = 'name';
+    } else {
+        $checkUsername = $conn->query("SHOW COLUMNS FROM users LIKE 'username'");
+        if ($checkUsername && $checkUsername->num_rows > 0) {
+            $nameColumn = 'username';
+        }
+        if ($checkUsername instanceof mysqli_result) {
+            $checkUsername->free();
+        }
+    }
+
+    if ($checkName instanceof mysqli_result) {
+        $checkName->free();
+    }
+
+    return $nameColumn;
+}
+
+function columnExists(mysqli $conn, string $table, string $column): bool {
+    $tableSafe = $conn->real_escape_string($table);
+    $columnSafe = $conn->real_escape_string($column);
+    $result = $conn->query("SHOW COLUMNS FROM `$tableSafe` LIKE '$columnSafe'");
+
+    if (!$result) {
+        return false;
+    }
+
+    $exists = $result->num_rows > 0;
+    $result->free();
+
+    return $exists;
+}
+
+$userNameColumn = resolveUserNameColumn($conn);
+$hasResetColumns = columnExists($conn, 'users', 'reset_token') && columnExists($conn, 'users', 'reset_token_expires_at');
+
 if (isset($_POST['login'])) {
     $identifier = trim($_POST['identifier'] ?? '');
     $password = $_POST['password'] ?? '';
@@ -25,15 +66,32 @@ if (isset($_POST['login'])) {
     if ($identifier === '' || $password === '' || $role === '') {
         $error = "Role, username/email and password are required.";
     } else {
-        $stmt = $conn->prepare(
-            "SELECT id, name, email, password, role FROM users WHERE (name = ? OR email = ?) AND role = ? LIMIT 1"
-        );
+        if ($userNameColumn === null) {
+            $error = "Login is misconfigured. Missing username column in database.";
+            $stmt = false;
+        } else {
+            $stmt = $conn->prepare(
+                "SELECT id, `$userNameColumn` AS login_name, email, password, role 
+                 FROM users 
+                 WHERE (`$userNameColumn` = ? OR email = ?) AND role = ? 
+                 LIMIT 1"
+            );
+        }
 
         if ($stmt) {
-$stmt->bind_param("sss", $identifier, $identifier, $role);
+            $stmt->bind_param("sss", $identifier, $identifier, $role);
             $stmt->execute();
-            $result = $stmt->get_result();
-            $user = $result ? $result->fetch_assoc() : null;
+            $stmt->bind_result($userId, $loginName, $userEmail, $storedPasswordHash, $dbRole);
+            $user = null;
+            if ($stmt->fetch()) {
+                $user = [
+                    'id' => $userId,
+                    'login_name' => $loginName,
+                    'email' => $userEmail,
+                    'password' => $storedPasswordHash,
+                    'role' => $dbRole,
+                ];
+            }
             $stmt->close();
 
             $isPasswordValid = false;
@@ -56,30 +114,45 @@ $stmt->bind_param("sss", $identifier, $identifier, $role);
             if ($user && $isPasswordValid) {
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['role'] = $user['role'];
-                $_SESSION['name'] = $user['name'];
+                $_SESSION['name'] = $user['login_name'];
                 redirectByRole($user['role']);
             } else {
                 $error = "Invalid username/email or password";
             }
-        } else {
+        } elseif ($error === "") {
             $error = "Unable to process login right now. Please try again.";
         }
     }
 }
 
 if (isset($_POST['forgot_password'])) {
+    if (!$hasResetColumns) {
+        $error = "Forgot password is unavailable because reset columns are missing in users table.";
+        $mode = 'login';
+    } else {
     $email = trim($_POST['email'] ?? '');
 
     if ($email === '') {
         $error = "Please enter your registered email.";
         $mode = 'forgot';
     } else {
-        $stmt = $conn->prepare("SELECT id, name FROM users WHERE email = ? LIMIT 1");
+        if ($userNameColumn === null) {
+            $error = "Password reset is misconfigured. Missing username column in database.";
+            $stmt = false;
+        } else {
+            $stmt = $conn->prepare("SELECT id, `$userNameColumn` AS login_name FROM users WHERE email = ? LIMIT 1");
+        }
         if ($stmt) {
             $stmt->bind_param("s", $email);
             $stmt->execute();
-            $result = $stmt->get_result();
-            $user = $result ? $result->fetch_assoc() : null;
+            $stmt->bind_result($userId, $loginName);
+            $user = null;
+            if ($stmt->fetch()) {
+                $user = [
+                    'id' => $userId,
+                    'login_name' => $loginName,
+                ];
+            }
             $stmt->close();
 
             if ($user) {
@@ -98,7 +171,7 @@ if (isset($_POST['forgot_password'])) {
                     $resetLink = rtrim($baseUrl, '/') . '/index.php?action=reset&token=' . urlencode($plainToken);
 
                     $subject = "Library Password Reset";
-                    $message = "Hello " . $user['name'] . ",\n\n" .
+                    $message = "Hello " . $user['login_name'] . ",\n\n" .
                         "We received a password reset request for your account.\n" .
                         "Use this link to reset your password (valid for 1 hour):\n" .
                         $resetLink . "\n\n" .
@@ -120,18 +193,23 @@ if (isset($_POST['forgot_password'])) {
                 $error = "Email not found.";
                 $mode = 'forgot';
             }
-        } else {
+        } elseif ($error === "") {
             $error = "Unable to process request right now. Please try again.";
             $mode = 'forgot';
         }
     }
+    }
 }
 
 if (isset($_POST['reset_password'])) {
-    $mode = 'reset';
-    $token = trim($_POST['token'] ?? '');
-    $newPassword = $_POST['new_password'] ?? '';
-    $confirmPassword = $_POST['confirm_password'] ?? '';
+    if (!$hasResetColumns) {
+        $error = "Reset password is unavailable because reset columns are missing in users table.";
+        $mode = 'login';
+    } else {
+        $mode = 'reset';
+        $token = trim($_POST['token'] ?? '');
+        $newPassword = $_POST['new_password'] ?? '';
+        $confirmPassword = $_POST['confirm_password'] ?? '';
 
     if ($token === '') {
         $error = "Invalid or missing reset token.";
@@ -152,8 +230,11 @@ if (isset($_POST['reset_password'])) {
         if ($stmt) {
             $stmt->bind_param("ss", $tokenHash, $now);
             $stmt->execute();
-            $result = $stmt->get_result();
-            $user = $result ? $result->fetch_assoc() : null;
+            $stmt->bind_result($userId);
+            $user = null;
+            if ($stmt->fetch()) {
+                $user = ['id' => $userId];
+            }
             $stmt->close();
 
             if ($user) {
@@ -177,8 +258,8 @@ if (isset($_POST['reset_password'])) {
                 if ($checkStmt) {
                     $checkStmt->bind_param("s", $tokenHash);
                     $checkStmt->execute();
-                    $expiredResult = $checkStmt->get_result();
-                    $tokenExists = $expiredResult && $expiredResult->num_rows > 0;
+                    $checkStmt->bind_result($expiredTokenUserId);
+                    $tokenExists = $checkStmt->fetch();
                     $checkStmt->close();
 
                     $error = $tokenExists ? "Reset link has expired." : "Invalid reset link.";
@@ -189,6 +270,7 @@ if (isset($_POST['reset_password'])) {
         } else {
             $error = "Unable to validate token right now. Please try again.";
         }
+    }
     }
 }
 ?>
@@ -219,7 +301,11 @@ body:after{content:"";position:absolute;right:-80px;top:-80px;width:260px;height
 input,select{width:100%;padding:14px 14px;border-radius:12px;border:1px solid #d9dfeb;background:#edf1fb;font-size:15px}
 button{width:100%;padding:13px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--primary2));color:white;font-weight:700;font-size:20px;cursor:pointer;margin-top:4px}
 .error{color:#dc2626;text-align:center;margin-bottom:12px;font-size:13px}
-@media(max-width:1024px){.shell{grid-template-columns:1fr;gap:18px}.branding h1{font-size:46px}.branding p{font-size:24px}.login-container h2{font-size:36px}.pill{font-size:16px}label,input,select,button{font-size:20px}}
+.success{color:#166534;text-align:center;margin-bottom:12px;font-size:13px;word-break:break-word}
+.form-links{display:flex;justify-content:space-between;gap:16px;margin-top:10px;font-size:13px}
+.form-links a{color:#1d4ed8;text-decoration:none;font-weight:500}
+.form-links a:hover{text-decoration:underline}
+@media(max-width:1024px){.shell{grid-template-columns:1fr;gap:18px}.branding h1{font-size:42px}.branding p{font-size:24px}.login-container h2{font-size:36px}.pill{font-size:16px}label,input,select,button{font-size:18px}}
 </style>
 </head>
 
@@ -297,7 +383,9 @@ Management</h1>
                 <button type="submit" name="login">Login</button>
                 <div class="form-links">
                     <span></span>
-                    <a href="index.php?action=forgot">Forgot Password?</a>
+                    <?php if ($hasResetColumns): ?>
+                        <a href="index.php?action=forgot">Forgot Password?</a>
+                    <?php endif; ?>
                 </div>
             </form>
         <?php endif; ?>

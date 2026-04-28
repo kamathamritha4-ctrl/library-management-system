@@ -40,6 +40,15 @@ function resolveUserNameColumn(mysqli $conn): ?string {
     return $nameColumn;
 }
 
+function resolveFirstExistingColumn(mysqli $conn, string $table, array $candidates): ?string {
+    foreach ($candidates as $candidate) {
+        if (columnExists($conn, $table, $candidate)) {
+            return $candidate;
+        }
+    }
+    return null;
+}
+
 function columnExists(mysqli $conn, string $table, string $column): bool {
     $tableSafe = $conn->real_escape_string($table);
     $columnSafe = $conn->real_escape_string($column);
@@ -57,6 +66,9 @@ function columnExists(mysqli $conn, string $table, string $column): bool {
 
 $userNameColumn = resolveUserNameColumn($conn);
 $hasResetColumns = columnExists($conn, 'users', 'reset_token') && columnExists($conn, 'users', 'reset_token_expires_at');
+$emailColumn = resolveFirstExistingColumn($conn, 'users', ['email', 'mail']);
+$passwordColumn = resolveFirstExistingColumn($conn, 'users', ['password', 'pass']);
+$roleColumn = resolveFirstExistingColumn($conn, 'users', ['role', 'user_role', 'usertype']);
 
 if (isset($_POST['login'])) {
     $identifier = trim($_POST['identifier'] ?? '');
@@ -66,28 +78,46 @@ if (isset($_POST['login'])) {
     if ($identifier === '' || $password === '' || $role === '') {
         $error = "Role, username/email and password are required.";
     } else {
-        if ($userNameColumn === null) {
+        if ($userNameColumn === null || $passwordColumn === null) {
             $error = "Login is misconfigured. Missing username column in database.";
             $stmt = false;
         } else {
-            $stmt = $conn->prepare(
-                "SELECT id, `$userNameColumn` AS login_name, email, password, role 
-                 FROM users 
-                 WHERE (`$userNameColumn` = ? OR email = ?) AND role = ? 
-                 LIMIT 1"
-            );
+            $params = [];
+            $types = "";
+            $whereParts = ["`$userNameColumn` = ?"];
+            $params[] = $identifier;
+            $types .= "s";
+
+            if ($emailColumn !== null) {
+                $whereParts[] = "`$emailColumn` = ?";
+                $params[] = $identifier;
+                $types .= "s";
+            }
+
+            $sql = "SELECT id, `$userNameColumn` AS login_name, `$passwordColumn` AS password_hash";
+            if ($roleColumn !== null) {
+                $sql .= ", `$roleColumn` AS role_value";
+            } else {
+                $sql .= ", '' AS role_value";
+            }
+            $sql .= " FROM users WHERE (" . implode(" OR ", $whereParts) . ") LIMIT 1";
+            $stmt = $conn->prepare($sql);
         }
 
         if ($stmt) {
-            $stmt->bind_param("sss", $identifier, $identifier, $role);
+            $bindValues = [];
+            $bindValues[] = $types;
+            foreach ($params as $k => $value) {
+                $bindValues[] = &$params[$k];
+            }
+            call_user_func_array([$stmt, 'bind_param'], $bindValues);
             $stmt->execute();
-            $stmt->bind_result($userId, $loginName, $userEmail, $storedPasswordHash, $dbRole);
+            $stmt->bind_result($userId, $loginName, $storedPasswordHash, $dbRole);
             $user = null;
             if ($stmt->fetch()) {
                 $user = [
                     'id' => $userId,
                     'login_name' => $loginName,
-                    'email' => $userEmail,
                     'password' => $storedPasswordHash,
                     'role' => $dbRole,
                 ];
@@ -111,11 +141,13 @@ if (isset($_POST['login'])) {
                 }
             }
 
-            if ($user && $isPasswordValid) {
+            $isRoleValid = !$user || $roleColumn === null ? true : $user['role'] === $role;
+
+            if ($user && $isPasswordValid && $isRoleValid) {
                 $_SESSION['user_id'] = $user['id'];
-                $_SESSION['role'] = $user['role'];
+                $_SESSION['role'] = $roleColumn !== null ? $user['role'] : $role;
                 $_SESSION['name'] = $user['login_name'];
-                redirectByRole($user['role']);
+                redirectByRole($roleColumn !== null ? $user['role'] : $role);
             } else {
                 $error = "Invalid username/email or password";
             }
@@ -289,12 +321,13 @@ body{min-height:100vh;background:linear-gradient(90deg,#f1f3fa 0 63%,#f7e6dc 63%
 body:before{content:"";position:absolute;left:-120px;bottom:-140px;width:360px;height:360px;border-radius:50%;background:#c8cfde}
 body:after{content:"";position:absolute;right:-80px;top:-80px;width:260px;height:260px;border-radius:50%;background:#f3d7ba;opacity:.95}
 .shell{width:min(1200px,94vw);display:grid;grid-template-columns:1fr 480px;gap:44px;align-items:center;position:relative;z-index:1}
-.branding{padding:10px 20px;color:#1f2937}
+.branding{padding:10px 20px;color:#1f2937;display:flex;flex-direction:column;justify-content:center}
+.brand-header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px}
 .pill{display:inline-block;padding:8px 14px;background:#d7dbef;color:#5255af;border-radius:999px;font-size:12px;font-weight:600;margin-bottom:16px}
-.logo-card{display:inline-flex;align-items:center;background:white;padding:10px 16px;border-radius:12px;box-shadow:0 6px 20px rgba(15,23,42,.08);margin-bottom:16px}
+.logo-card{display:inline-flex;align-items:center;background:white;padding:10px 16px;border-radius:12px;box-shadow:0 6px 20px rgba(15,23,42,.08)}
 .logo-card img{height:54px;width:auto;display:block}
-.branding h1{font-size:64px;line-height:1.05;color:#1f2a3f;margin-bottom:12px;max-width:480px}
-.branding p{font-size:30px;color:var(--muted);max-width:560px}
+.branding h1{font-size:58px;line-height:1.05;color:#1f2a3f;margin-bottom:14px;max-width:560px}
+.branding p{font-size:34px;color:var(--muted);max-width:620px;line-height:1.25}
 .login-container{background:white;padding:34px;border-radius:20px;box-shadow:0 22px 34px rgba(15,23,42,.14)}
 .login-container h2{text-align:center;font-size:46px;color:#1f2a3f;margin-bottom:22px}
 .form-group{margin-bottom:15px}label{display:block;font-size:15px;color:#4b5563;margin-bottom:6px;font-weight:500}
@@ -312,8 +345,10 @@ button{width:100%;padding:13px;border:none;border-radius:12px;background:linear-
 <body>
 <div class="shell">
 <div class="branding">
-    <span class="pill">📚 Trisha Library Suite</span>
-    <div class="logo-card"><img src="https://trishaedu.com/Trisha-Logo.png" alt="Trisha Logo"></div>
+    <div class="brand-header">
+        <span class="pill">📚 Trisha Library Suite</span>
+        <div class="logo-card"><img src="https://trishaedu.com/Trisha-Logo.png" alt="Trisha Logo"></div>
+    </div>
     <h1>Trisha Library
 Management</h1>
     <p>Manage catalog, issue/returns, fines, and student access from one modern dashboard.</p>

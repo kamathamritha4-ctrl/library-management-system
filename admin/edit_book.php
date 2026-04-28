@@ -34,8 +34,6 @@ if (isset($_POST['update'])) {
     $price = $_POST['price'] !== '' ? (float) $_POST['price'] : 0;
     $total = (int) $_POST['total_copies'];
     $quantity = (int) $_POST['quantity'];
-    $billNo = trim($_POST['bill_no']);
-    $billDate = $_POST['bill_date'] ?: null;
     $supplier = trim($_POST['supplier']);
     $edition = trim($_POST['edition']);
     $remarks = trim($_POST['remarks']);
@@ -46,8 +44,8 @@ if (isset($_POST['update'])) {
     if ($dup->get_result()->num_rows > 0) {
         $error = "Accession number already used by another book.";
     } else {
-        $update = $conn->prepare("UPDATE books SET date_of_accession=?, accession_no=?, category=?, author=?, title=?, publisher=?, year=?, price=?, total_copies=?, quantity=?, bill_no=?, bill_date=?, supplier=?, edition=?, remarks=? WHERE id=?");
-        $update->bind_param("sisssssdiiissssi", $dateOfAccession, $accessionNo, $subject, $author, $title, $publisher, $year, $price, $total, $quantity, $billNo, $billDate, $supplier, $edition, $remarks, $id);
+        $update = $conn->prepare("UPDATE books SET date_of_accession=?, accession_no=?, category=?, author=?, title=?, publisher=?, year=?, price=?, total_copies=?, quantity=?, supplier=?, edition=?, remarks=? WHERE id=?");
+        $update->bind_param("sisssssdiisssi", $dateOfAccession, $accessionNo, $subject, $author, $title, $publisher, $year, $price, $total, $quantity, $supplier, $edition, $remarks, $id);
         $update->execute();
         header("Location: manage_books.php");
         exit();
@@ -68,7 +66,6 @@ if (isset($_POST['update'])) {
 <div class="row"><div class="form-group"><label>Title & Volume</label><input type="text" name="title" value="<?php echo htmlspecialchars($book['title']); ?>" required></div><div class="form-group"><label>Publisher</label><input type="text" name="publisher" value="<?php echo htmlspecialchars($book['publisher']); ?>"></div></div>
 <div class="row"><div class="form-group"><label>Year</label><input type="number" name="year" value="<?php echo htmlspecialchars((string)$book['year']); ?>"></div><div class="form-group"><label>Price</label><input type="number" step="0.01" name="price" value="<?php echo htmlspecialchars((string)$book['price']); ?>"></div></div>
 <div class="row"><div class="form-group"><label>Total Copies</label><input type="number" name="total_copies" value="<?php echo (int)$book['total_copies']; ?>"></div><div class="form-group"><label>Available Quantity</label><input type="number" name="quantity" value="<?php echo (int)$book['quantity']; ?>"></div></div>
-<div class="row"><div class="form-group"><label>Bill No</label><input type="text" name="bill_no" value="<?php echo htmlspecialchars((string)$book['bill_no']); ?>"></div><div class="form-group"><label>Bill Date</label><input type="date" name="bill_date" value="<?php echo htmlspecialchars((string)$book['bill_date']); ?>"></div></div>
 <div class="row"><div class="form-group"><label>Supplier</label><input type="text" name="supplier" value="<?php echo htmlspecialchars((string)$book['supplier']); ?>"></div><div class="form-group"><label>Edition</label><input type="text" name="edition" value="<?php echo htmlspecialchars((string)$book['edition']); ?>"></div></div>
 <div class="form-group"><label>Remarks</label><textarea name="remarks" rows="2"><?php echo htmlspecialchars((string)$book['remarks']); ?></textarea></div>
 <div class="actions"><button type="submit" name="update" class="btn btn-primary">Update Book</button></div></form></div></div></div>

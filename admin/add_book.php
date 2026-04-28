@@ -46,19 +46,17 @@ if (isset($_POST['import']) && isset($_FILES['file']) && $_FILES['file']['error'
             $year = !empty($row[6]) ? (int) $row[6] : null;
             $price = isset($row[7]) ? (float) $row[7] : 0;
             $total = isset($row[8]) ? (int) $row[8] : 1;
-            $billNo = trim((string) ($row[9] ?? ''));
-            $billDate = !empty($row[10]) ? date('Y-m-d', strtotime((string) $row[10])) : null;
-            $supplier = trim((string) ($row[11] ?? ''));
-            $edition = trim((string) ($row[12] ?? ''));
-            $remarks = trim((string) ($row[13] ?? ''));
+            $supplier = trim((string) ($row[9] ?? ''));
+            $edition = trim((string) ($row[10] ?? ''));
+            $remarks = trim((string) ($row[11] ?? ''));
 
             $check = $conn->prepare("SELECT id FROM books WHERE accession_no = ?");
             $check->bind_param("i", $accessionNo);
             $check->execute();
             if ($check->get_result()->num_rows > 0) continue;
 
-            $stmt = $conn->prepare("INSERT INTO books (date_of_accession, accession_no, category, author, title, publisher, year, price, total_copies, quantity, bill_no, bill_date, supplier, edition, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("sisssssdiiissss", $dateOfAccession, $accessionNo, $subject, $author, $title, $publisher, $year, $price, $total, $total, $billNo, $billDate, $supplier, $edition, $remarks);
+            $stmt = $conn->prepare("INSERT INTO books (date_of_accession, accession_no, category, author, title, publisher, year, price, total_copies, quantity, supplier, edition, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("sisssssdiiiss", $dateOfAccession, $accessionNo, $subject, $author, $title, $publisher, $year, $price, $total, $total, $supplier, $edition, $remarks);
             $stmt->execute();
         }
 
@@ -78,8 +76,6 @@ if (isset($_POST['save'])) {
     $year = $_POST['year'] !== '' ? (int) $_POST['year'] : null;
     $price = $_POST['price'] !== '' ? (float) $_POST['price'] : 0;
     $total = max(1, (int) $_POST['total_copies']);
-    $billNo = trim($_POST['bill_no']);
-    $billDate = $_POST['bill_date'] ?: null;
     $supplier = trim($_POST['supplier']);
     $edition = trim($_POST['edition']);
     $remarks = trim($_POST['remarks']);
@@ -90,8 +86,8 @@ if (isset($_POST['save'])) {
     if ($check->get_result()->num_rows > 0) {
         $error = "Accession number already exists.";
     } else {
-        $stmt = $conn->prepare("INSERT INTO books (date_of_accession, accession_no, category, author, title, publisher, year, price, total_copies, quantity, bill_no, bill_date, supplier, edition, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("sisssssdiiissss", $dateOfAccession, $accessionNo, $subject, $author, $title, $publisher, $year, $price, $total, $total, $billNo, $billDate, $supplier, $edition, $remarks);
+        $stmt = $conn->prepare("INSERT INTO books (date_of_accession, accession_no, category, author, title, publisher, year, price, total_copies, quantity, supplier, edition, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("sisssssdiiiss", $dateOfAccession, $accessionNo, $subject, $author, $title, $publisher, $year, $price, $total, $total, $supplier, $edition, $remarks);
         if ($stmt->execute()) $success = "Book added successfully."; else $error = "Error: " . $stmt->error;
     }
 }
@@ -138,10 +134,6 @@ if (isset($_POST['save'])) {
       </div>
       <div class="row">
         <div class="form-group"><label>Total Copies</label><input type="number" name="total_copies" min="1" required></div>
-        <div class="form-group"><label>Bill No</label><input type="text" name="bill_no"></div>
-      </div>
-      <div class="row">
-        <div class="form-group"><label>Bill Date</label><input type="date" name="bill_date"></div>
         <div class="form-group"><label>Supplier</label><input type="text" name="supplier"></div>
       </div>
       <div class="row">

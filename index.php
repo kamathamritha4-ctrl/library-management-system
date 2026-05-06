@@ -1,50 +1,21 @@
 <?php
 include("config/config.php");
 
-
 $error = "";
+$success = "";
+$mode = isset($_GET['action']) ? $_GET['action'] : 'login';
+$token = isset($_GET['token']) ? trim($_GET['token']) : '';
 
-if(isset($_POST['login'])) {
-
-    $username = trim($_POST['username']);
-    $password = md5($_POST['password']); // keep if your DB uses md5
-    $role = $_POST['role'];
-
-    $stmt = $conn->prepare("
-        SELECT * FROM users 
-        WHERE name = ? 
-        AND password = ? 
-        AND role = ?
-    ");
-
-    $stmt->bind_param("sss", $username, $password, $role);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if($result->num_rows == 1) {
-
-        $row = $result->fetch_assoc();
-
-        $_SESSION['user_id'] = $row['id'];
-        $_SESSION['role'] = $row['role'];
-        $_SESSION['name'] = $row['name'];
-
-        if($role == 'admin') {
-            header("Location: admin/dashboard.php");
-        } 
-        elseif($role == 'faculty') {
-            header("Location: faculty/search.php");
-        } 
-        else {
-            header("Location: student/search.php");
-        }
-        exit();
-
+function redirectByRole(string $role): void {
+    if ($role === 'admin') {
+        header("Location: admin/dashboard.php");
+    } elseif ($role === 'faculty') {
+        header("Location: faculty/search.php");
     } else {
-        $error = "Invalid Credentials";
+        header("Location: student/search.php");
     }
+    exit();
 }
-?>
 
 <!DOCTYPE html>
 <html>

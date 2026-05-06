@@ -1,7 +1,6 @@
 <?php
 include("config/config.php");
 
-
 $error = "";
 
 if(isset($_POST['login'])) {
@@ -36,10 +35,10 @@ if(isset($_POST['login'])) {
         exit();
 
     } else {
-        $error = "Invalid Credentials";
+        header("Location: student/search.php");
     }
+    exit();
 }
-?>
 
 <!DOCTYPE html>
 <html>

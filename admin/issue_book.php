@@ -37,41 +37,51 @@ if (isset($_POST['issue'])) {
     $calculatedDueDate = calculate_due_date($conn, $issueDate);
     $dueDate = !empty($_POST['due_date']) ? $_POST['due_date'] : $calculatedDueDate;
 
-    $userStmt = $conn->prepare("SELECT id FROM users WHERE id = ? AND role IN ('student','faculty')");
-    $userStmt->bind_param("i", $userId);
-    $userStmt->execute();
-    $userResult = $userStmt->get_result();
+    $issueDateObj = DateTime::createFromFormat('Y-m-d', $issueDate);
+    $dueDateObj = DateTime::createFromFormat('Y-m-d', $dueDate);
+    if (!$issueDateObj || !$dueDateObj) {
+        $error = "Invalid issue/due date format.";
+    } elseif ($dueDateObj < $issueDateObj) {
+        $error = "Due date cannot be earlier than issue date.";
+    }
 
-    if ($userResult->num_rows !== 1) {
-        $error = "Invalid user ID. Issue is allowed only to student/faculty users.";
-    } else {
-        $bookStmt = $conn->prepare("SELECT quantity FROM books WHERE accession_no = ?");
-        $bookStmt->bind_param("i", $accessionNo);
-        $bookStmt->execute();
-        $bookResult = $bookStmt->get_result();
+    if ($error === "") {
+        $userStmt = $conn->prepare("SELECT id FROM users WHERE id = ? AND role IN ('student','faculty')");
+        $userStmt->bind_param("i", $userId);
+        $userStmt->execute();
+        $userResult = $userStmt->get_result();
 
-        if ($bookResult->num_rows === 1) {
-            $book = $bookResult->fetch_assoc();
+        if ($userResult->num_rows !== 1) {
+            $error = "Invalid user ID. Issue is allowed only to student/faculty users.";
+        } else {
+            $bookStmt = $conn->prepare("SELECT quantity FROM books WHERE accession_no = ?");
+            $bookStmt->bind_param("i", $accessionNo);
+            $bookStmt->execute();
+            $bookResult = $bookStmt->get_result();
 
-            if ((int) $book['quantity'] > 0) {
-                $fineInfo = calculate_overdue_fine($conn, $dueDate, date('Y-m-d'));
-                $initialFine = (int) $fineInfo['fine'];
-                $insertStmt = $conn->prepare("INSERT INTO issued_books (user_id, accession_no, issue_date, due_date, fine) VALUES (?, ?, ?, ?, ?)");
-                $insertStmt->bind_param("iissi", $userId, $accessionNo, $issueDate, $dueDate, $initialFine);
+            if ($bookResult->num_rows === 1) {
+                $book = $bookResult->fetch_assoc();
 
-                if ($insertStmt->execute()) {
-                    $updateStmt = $conn->prepare("UPDATE books SET quantity = quantity - 1 WHERE accession_no = ?");
-                    $updateStmt->bind_param("i", $accessionNo);
-                    $updateStmt->execute();
-                    $success = "Book issued successfully.";
+                if ((int) $book['quantity'] > 0) {
+                    $fineInfo = calculate_overdue_fine($conn, $dueDate, date('Y-m-d'));
+                    $initialFine = (int) $fineInfo['fine'];
+                    $insertStmt = $conn->prepare("INSERT INTO issued_books (user_id, accession_no, issue_date, due_date, fine) VALUES (?, ?, ?, ?, ?)");
+                    $insertStmt->bind_param("iissi", $userId, $accessionNo, $issueDate, $dueDate, $initialFine);
+
+                    if ($insertStmt->execute()) {
+                        $updateStmt = $conn->prepare("UPDATE books SET quantity = quantity - 1 WHERE accession_no = ?");
+                        $updateStmt->bind_param("i", $accessionNo);
+                        $updateStmt->execute();
+                        $success = "Book issued successfully.";
+                    } else {
+                        $error = "Unable to issue book: " . $insertStmt->error;
+                    }
                 } else {
-                    $error = "Unable to issue book: " . $insertStmt->error;
+                    $error = "No copies available for this book.";
                 }
             } else {
-                $error = "No copies available for this book.";
+                $error = "Book not found.";
             }
-        } else {
-            $error = "Book not found.";
         }
     }
 }
@@ -102,7 +112,7 @@ if (isset($_POST['issue'])) {
       </div>
       <div class="row">
         <div class="form-group"><label>Issue Date</label><input type="date" id="issue_date" name="issue_date" value="<?php echo htmlspecialchars($issueDate); ?>" required></div>
-        <div class="form-group"><label>Due Date (Editable for testing)</label><input type="date" id="due_date" name="due_date" value="<?php echo htmlspecialchars($dueDate); ?>" required></div>
+        <div class="form-group"><label>Due Date</label><input type="date" id="due_date" name="due_date" value="<?php echo htmlspecialchars($dueDate); ?>" required></div>
       </div>
       <div class="actions">
         <button type="submit" name="preview" class="btn btn-secondary"><i class="fas fa-eye"></i> Preview Book</button>

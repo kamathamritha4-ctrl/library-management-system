@@ -12,7 +12,7 @@ $error = "";
 
 function sync_live_fines(mysqli $conn, string $asOfDate): void
 {
-    $activeIssues = $conn->query("SELECT id, due_date, fine FROM issued_books WHERE return_date IS NULL");
+    $activeIssues = $conn->query("SELECT id, issue_date, due_date, fine FROM issued_books WHERE return_date IS NULL");
     if (!$activeIssues) {
         return;
     }
@@ -23,6 +23,9 @@ function sync_live_fines(mysqli $conn, string $asOfDate): void
     }
 
     while ($issue = $activeIssues->fetch_assoc()) {
+        if (!empty($issue['issue_date']) && $issue['due_date'] < $issue['issue_date']) {
+            continue;
+        }
         $fineInfo = calculate_overdue_fine($conn, $issue['due_date'], $asOfDate);
         $calculatedFine = (int) $fineInfo['fine'];
         $storedFine = (int) ($issue['fine'] ?? 0);
@@ -67,8 +70,11 @@ if (isset($_GET['return_id'])) {
 if (isset($_POST['send_overdue_notifications'])) {
     $today = date('Y-m-d');
     $mailCount = 0;
+    $skippedNoEmail = 0;
+    $skippedNotOverdue = 0;
+    $skippedInvalidDates = 0;
 
-    $query = "SELECT ib.id, ib.user_id, ib.accession_no, ib.due_date, b.title, u.name, u.email
+    $query = "SELECT ib.id, ib.user_id, ib.accession_no, ib.issue_date, ib.due_date, b.title, u.name, u.email
               FROM issued_books ib
               JOIN books b ON b.accession_no = ib.accession_no
               JOIN users u ON u.id = ib.user_id
@@ -78,13 +84,19 @@ if (isset($_POST['send_overdue_notifications'])) {
 
     if ($issues) {
         while ($row = $issues->fetch_assoc()) {
+            if ($row['due_date'] < $row['issue_date']) {
+                $skippedInvalidDates++;
+                continue;
+            }
             $fineInfo = calculate_overdue_fine($conn, $row['due_date'], $today);
             if ($fineInfo['fine'] <= 0) {
+                $skippedNotOverdue++;
                 continue;
             }
 
             $email = trim((string) ($row['email'] ?? ''));
             if ($email === '') {
+                $skippedNoEmail++;
                 continue;
             }
 
@@ -107,7 +119,7 @@ if (isset($_POST['send_overdue_notifications'])) {
         }
     }
 
-    $success = "Overdue notification process completed. Emails sent: {$mailCount}.";
+    $success = "Overdue notification process completed. Emails sent: {$mailCount}, skipped (not overdue): {$skippedNotOverdue}, skipped (missing email): {$skippedNoEmail}, skipped (invalid issue/due dates): {$skippedInvalidDates}.";
 }
 
 $today = date('Y-m-d');

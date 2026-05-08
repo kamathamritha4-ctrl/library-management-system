@@ -5,19 +5,33 @@ $error = "";
 
 if (isset($_POST['login'])) {
     $username = trim($_POST['username'] ?? '');
-    $password = md5($_POST['password'] ?? '');
+    $rawPassword = $_POST['password'] ?? '';
+    $md5Password = md5($rawPassword);
     $role = $_POST['role'] ?? '';
 
-    $stmt = $conn->prepare("SELECT * FROM users WHERE name = ? AND password = ? AND role = ?");
-    $stmt->bind_param("sss", $username, $password, $role);
+    $stmt = $conn->prepare("SELECT * FROM users WHERE name = ? AND role = ?");
+    $stmt->bind_param("ss", $username, $role);
     $stmt->execute();
     $result = $stmt->get_result();
 
-    if ($result && $result->num_rows === 1) {
-        $row = $result->fetch_assoc();
-        $_SESSION['user_id'] = $row['id'];
-        $_SESSION['role'] = $row['role'];
-        $_SESSION['name'] = $row['name'];
+    $matchedUser = null;
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $stored = (string) ($row['password'] ?? '');
+            $isMd5Match = hash_equals($stored, $md5Password);
+            $isBcryptMatch = password_verify($rawPassword, $stored);
+
+            if ($isMd5Match || $isBcryptMatch) {
+                $matchedUser = $row;
+                break;
+            }
+        }
+    }
+
+    if ($matchedUser) {
+        $_SESSION['user_id'] = $matchedUser['id'];
+        $_SESSION['role'] = $matchedUser['role'];
+        $_SESSION['name'] = $matchedUser['name'];
 
         if ($role === 'admin') {
             header("Location: admin/dashboard.php");

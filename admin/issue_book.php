@@ -12,7 +12,8 @@ $error = "";
 $bookDetails = null;
 
 $issueDate = $_POST['issue_date'] ?? date('Y-m-d');
-$dueDate = calculate_due_date($conn, $issueDate);
+$calculatedDueDate = calculate_due_date($conn, $issueDate);
+$dueDate = $_POST['due_date'] ?? $calculatedDueDate;
 
 if (isset($_POST['preview'])) {
     $accessionNo = (int) ($_POST['accession_no'] ?? 0);
@@ -33,7 +34,8 @@ if (isset($_POST['issue'])) {
     $userId = (int) $_POST['user_id'];
     $accessionNo = (int) $_POST['accession_no'];
     $issueDate = $_POST['issue_date'];
-    $dueDate = calculate_due_date($conn, $issueDate);
+    $calculatedDueDate = calculate_due_date($conn, $issueDate);
+    $dueDate = !empty($_POST['due_date']) ? $_POST['due_date'] : $calculatedDueDate;
 
     $userStmt = $conn->prepare("SELECT id FROM users WHERE id = ? AND role IN ('student','faculty')");
     $userStmt->bind_param("i", $userId);
@@ -98,7 +100,7 @@ if (isset($_POST['issue'])) {
       </div>
       <div class="row">
         <div class="form-group"><label>Issue Date</label><input type="date" id="issue_date" name="issue_date" value="<?php echo htmlspecialchars($issueDate); ?>" required></div>
-        <div class="form-group"><label>Due Date (15 days + Sunday/Holiday adjustment)</label><input type="date" id="due_date" value="<?php echo htmlspecialchars($dueDate); ?>" readonly></div>
+        <div class="form-group"><label>Due Date (Editable for testing)</label><input type="date" id="due_date" name="due_date" value="<?php echo htmlspecialchars($dueDate); ?>" required></div>
       </div>
       <div class="actions">
         <button type="submit" name="preview" class="btn btn-secondary"><i class="fas fa-eye"></i> Preview Book</button>

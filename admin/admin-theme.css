@@ -26,6 +26,7 @@ body{background:radial-gradient(circle at 86% 2%,#f6dcc8 0,#f3edf0 34%,#f3f4f8 7
 .btn{padding:10px 16px;border:none;border-radius:10px;cursor:pointer;color:#fff;font-weight:600;transition:.2s}
 .btn:hover{transform:translateY(-1px)}
 .btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-dark))}
+.btn-secondary{background:linear-gradient(135deg,#475569,#334155)}
 .btn-navy{background:linear-gradient(135deg,var(--navy),var(--navy-soft))}
 .btn-muted{background:#94a3b8;color:#0f172a}
 .table-card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 8px 20px rgba(0,0,0,.06);overflow:auto}

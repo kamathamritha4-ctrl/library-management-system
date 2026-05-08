@@ -20,6 +20,16 @@ function ensure_overdue_notification_column(mysqli $conn): void
 
 function send_overdue_notifications(mysqli $conn, string $today, bool $onlyUnnotifiedToday = false): array
 {
+    $smtpHost = getenv('SMTP_HOST') ?: '';
+    $smtpPort = getenv('SMTP_PORT') ?: '';
+    $smtpFrom = getenv('SMTP_FROM') ?: '';
+    if ($smtpHost !== '') {
+        @ini_set('SMTP', $smtpHost);
+    }
+    if ($smtpPort !== '') {
+        @ini_set('smtp_port', $smtpPort);
+    }
+
     $mailCount = 0;
     $failedSends = 0;
     $skippedNoEmail = 0;
@@ -85,9 +95,18 @@ function send_overdue_notifications(mysqli $conn, string $today, bool $onlyUnnot
 
         $headers = "MIME-Version: 1.0\r\n";
         $headers .= "Content-type:text/html;charset=UTF-8\r\n";
-        $headers .= "From: Library Admin <library-noreply@example.com>\r\n";
+        $fromAddress = $smtpFrom !== '' ? $smtpFrom : 'library-noreply@example.com';
+        $headers .= "From: Library Admin <{$fromAddress}>\r\n";
 
-        if (mail($email, $subject, $htmlMessage, $headers)) {
+        $mailWarning = null;
+        set_error_handler(function ($errno, $errstr) use (&$mailWarning) {
+            $mailWarning = $errstr;
+            return true;
+        });
+        $mailSent = mail($email, $subject, $htmlMessage, $headers);
+        restore_error_handler();
+
+        if ($mailSent) {
             $mailCount++;
             if ($updateNotifyStmt) {
                 $issueId = (int) $row['id'];
@@ -96,6 +115,7 @@ function send_overdue_notifications(mysqli $conn, string $today, bool $onlyUnnot
             }
         } else {
             $failedSends++;
+            error_log("Overdue mail send failed for issued_book id {$row['id']} ({$email})" . ($mailWarning ? ": {$mailWarning}" : ""));
         }
     }
 

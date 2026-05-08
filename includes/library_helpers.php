@@ -61,20 +61,11 @@ function calculate_overdue_fine(mysqli $conn, string $dueDate, string $returnDat
 
     $adjustedDue = to_next_working_day($conn, $due);
 
-    if ($returned <= $adjustedDue) {
+    if ($returned < $adjustedDue) {
         return ['days' => 0, 'fine' => 0, 'adjusted_due_date' => $adjustedDue->format('Y-m-d')];
     }
 
-    $days = 0;
-    $cursor = (clone $adjustedDue)->modify('+1 day');
-    while ($cursor <= $returned) {
-        $isSunday = (int) $cursor->format('w') === 0;
-        $isHoliday = is_library_holiday($conn, $cursor->format('Y-m-d'));
-        if (!$isSunday && !$isHoliday) {
-            $days++;
-        }
-        $cursor->modify('+1 day');
-    }
+    $days = (int) $adjustedDue->diff($returned)->format('%a') + 1;
     $fine = $days * $dailyFine;
 
     return ['days' => $days, 'fine' => $fine, 'adjusted_due_date' => $adjustedDue->format('Y-m-d')];

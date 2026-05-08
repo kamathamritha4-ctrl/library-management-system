@@ -10,6 +10,31 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
 $success = "";
 $error = "";
 
+function sync_live_fines(mysqli $conn, string $asOfDate): void
+{
+    $activeIssues = $conn->query("SELECT id, due_date, fine FROM issued_books WHERE return_date IS NULL");
+    if (!$activeIssues) {
+        return;
+    }
+
+    $updateFineStmt = $conn->prepare("UPDATE issued_books SET fine = ? WHERE id = ?");
+    if (!$updateFineStmt) {
+        return;
+    }
+
+    while ($issue = $activeIssues->fetch_assoc()) {
+        $fineInfo = calculate_overdue_fine($conn, $issue['due_date'], $asOfDate);
+        $calculatedFine = (int) $fineInfo['fine'];
+        $storedFine = (int) ($issue['fine'] ?? 0);
+
+        if ($calculatedFine !== $storedFine) {
+            $issueId = (int) $issue['id'];
+            $updateFineStmt->bind_param("ii", $calculatedFine, $issueId);
+            $updateFineStmt->execute();
+        }
+    }
+}
+
 if (isset($_GET['return_id'])) {
     $id = (int) $_GET['return_id'];
 
@@ -85,6 +110,9 @@ if (isset($_POST['send_overdue_notifications'])) {
     $success = "Overdue notification process completed. Emails sent: {$mailCount}.";
 }
 
+$today = date('Y-m-d');
+sync_live_fines($conn, $today);
+
 $issues = $conn->query("SELECT ib.*, b.title FROM issued_books ib JOIN books b ON ib.accession_no = b.accession_no WHERE ib.return_date IS NULL ORDER BY ib.id DESC");
 ?>
 <!DOCTYPE html>
@@ -112,7 +140,6 @@ $issues = $conn->query("SELECT ib.*, b.title FROM issued_books ib JOIN books b O
       <tbody>
       <?php
       if ($issues && $issues->num_rows > 0) {
-          $today = date('Y-m-d');
           while ($row = $issues->fetch_assoc()) {
               $fineInfo = calculate_overdue_fine($conn, $row['due_date'], $today);
               $status = "<a href='?return_id={$row['id']}' class='link-btn' onclick=\"return confirm('Mark this book as returned?')\">Return</a>";

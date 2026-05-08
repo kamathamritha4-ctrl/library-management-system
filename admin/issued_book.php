@@ -10,6 +10,95 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
 $success = "";
 $error = "";
 
+function ensure_overdue_notification_column(mysqli $conn): void
+{
+    $result = $conn->query("SHOW COLUMNS FROM issued_books LIKE 'overdue_last_notified'");
+    if ($result && $result->num_rows === 0) {
+        $conn->query("ALTER TABLE issued_books ADD COLUMN overdue_last_notified DATETIME NULL");
+    }
+}
+
+function send_overdue_notifications(mysqli $conn, string $today, bool $onlyUnnotifiedToday = false): array
+{
+    $mailCount = 0;
+    $skippedNoEmail = 0;
+    $skippedNotOverdue = 0;
+    $skippedInvalidDates = 0;
+
+    $query = "SELECT ib.id, ib.user_id, ib.accession_no, ib.issue_date, ib.due_date, ib.overdue_last_notified, b.title, u.name, u.email
+              FROM issued_books ib
+              JOIN books b ON b.accession_no = ib.accession_no
+              JOIN users u ON u.id = ib.user_id
+              WHERE ib.return_date IS NULL";
+
+    $issues = $conn->query($query);
+    if (!$issues) {
+        return compact('mailCount', 'skippedNoEmail', 'skippedNotOverdue', 'skippedInvalidDates');
+    }
+
+    $updateNotifyStmt = $conn->prepare("UPDATE issued_books SET overdue_last_notified = NOW() WHERE id = ?");
+    while ($row = $issues->fetch_assoc()) {
+        if ($row['due_date'] < $row['issue_date']) {
+            $skippedInvalidDates++;
+            continue;
+        }
+
+        if ($onlyUnnotifiedToday && !empty($row['overdue_last_notified'])) {
+            $lastNotified = substr((string) $row['overdue_last_notified'], 0, 10);
+            if ($lastNotified === $today) {
+                continue;
+            }
+        }
+
+        $fineInfo = calculate_overdue_fine($conn, $row['due_date'], $today);
+        if ($fineInfo['fine'] <= 0) {
+            $skippedNotOverdue++;
+            continue;
+        }
+
+        $email = trim((string) ($row['email'] ?? ''));
+        if ($email === '') {
+            $skippedNoEmail++;
+            continue;
+        }
+
+        $subject = "Library Overdue Notice - Book Return Required";
+        $safeName = htmlspecialchars((string) $row['name']);
+        $safeTitle = htmlspecialchars((string) $row['title']);
+        $safeDueDate = htmlspecialchars((string) $row['due_date']);
+
+        $htmlMessage = "
+            <html><body style='font-family:Arial,sans-serif;line-height:1.6;color:#1f2937'>
+            <p>Dear {$safeName},</p>
+            <p>This is a reminder that the following library book is overdue:</p>
+            <table cellpadding='6' cellspacing='0' border='1' style='border-collapse:collapse;border-color:#d1d5db'>
+              <tr><td><strong>Accession No</strong></td><td>{$row['accession_no']}</td></tr>
+              <tr><td><strong>Book Title</strong></td><td>{$safeTitle}</td></tr>
+              <tr><td><strong>Due Date</strong></td><td>{$safeDueDate}</td></tr>
+              <tr><td><strong>Overdue Days</strong></td><td>{$fineInfo['days']}</td></tr>
+              <tr><td><strong>Current Fine</strong></td><td>₹ {$fineInfo['fine']}</td></tr>
+            </table>
+            <p>Please return the book as soon as possible to avoid additional fines.</p>
+            <p>Regards,<br>Library Administration</p>
+            </body></html>";
+
+        $headers = "MIME-Version: 1.0\r\n";
+        $headers .= "Content-type:text/html;charset=UTF-8\r\n";
+        $headers .= "From: Library Admin <library-noreply@example.com>\r\n";
+
+        if (@mail($email, $subject, $htmlMessage, $headers)) {
+            $mailCount++;
+            if ($updateNotifyStmt) {
+                $issueId = (int) $row['id'];
+                $updateNotifyStmt->bind_param("i", $issueId);
+                $updateNotifyStmt->execute();
+            }
+        }
+    }
+
+    return compact('mailCount', 'skippedNoEmail', 'skippedNotOverdue', 'skippedInvalidDates');
+}
+
 function sync_live_fines(mysqli $conn, string $asOfDate): void
 {
     $activeIssues = $conn->query("SELECT id, issue_date, due_date, fine FROM issued_books WHERE return_date IS NULL");
@@ -69,61 +158,15 @@ if (isset($_GET['return_id'])) {
 
 if (isset($_POST['send_overdue_notifications'])) {
     $today = date('Y-m-d');
-    $mailCount = 0;
-    $skippedNoEmail = 0;
-    $skippedNotOverdue = 0;
-    $skippedInvalidDates = 0;
-
-    $query = "SELECT ib.id, ib.user_id, ib.accession_no, ib.issue_date, ib.due_date, b.title, u.name, u.email
-              FROM issued_books ib
-              JOIN books b ON b.accession_no = ib.accession_no
-              JOIN users u ON u.id = ib.user_id
-              WHERE ib.return_date IS NULL";
-
-    $issues = $conn->query($query);
-
-    if ($issues) {
-        while ($row = $issues->fetch_assoc()) {
-            if ($row['due_date'] < $row['issue_date']) {
-                $skippedInvalidDates++;
-                continue;
-            }
-            $fineInfo = calculate_overdue_fine($conn, $row['due_date'], $today);
-            if ($fineInfo['fine'] <= 0) {
-                $skippedNotOverdue++;
-                continue;
-            }
-
-            $email = trim((string) ($row['email'] ?? ''));
-            if ($email === '') {
-                $skippedNoEmail++;
-                continue;
-            }
-
-            $subject = "Library Overdue Notice - Accession #" . $row['accession_no'];
-            $message = "Hello " . $row['name'] . ",\n\n"
-                . "Your issued book is overdue.\n"
-                . "Accession No: " . $row['accession_no'] . "\n"
-                . "Title: " . $row['title'] . "\n"
-                . "Due Date: " . $row['due_date'] . "\n"
-                . "Overdue Days: " . $fineInfo['days'] . "\n"
-                . "Fine Amount: Rs " . $fineInfo['fine'] . "\n\n"
-                . "Please return the book at the earliest.\n"
-                . "- Library Admin";
-
-            $headers = "From: library-noreply@example.com\r\n";
-
-            if (@mail($email, $subject, $message, $headers)) {
-                $mailCount++;
-            }
-        }
-    }
-
-    $success = "Overdue notification process completed. Emails sent: {$mailCount}, skipped (not overdue): {$skippedNotOverdue}, skipped (missing email): {$skippedNoEmail}, skipped (invalid issue/due dates): {$skippedInvalidDates}.";
+    ensure_overdue_notification_column($conn);
+    $stats = send_overdue_notifications($conn, $today, false);
+    $success = "Overdue notification process completed. Emails sent: {$stats['mailCount']}, skipped (not overdue): {$stats['skippedNotOverdue']}, skipped (missing email): {$stats['skippedNoEmail']}, skipped (invalid issue/due dates): {$stats['skippedInvalidDates']}.";
 }
 
 $today = date('Y-m-d');
+ensure_overdue_notification_column($conn);
 sync_live_fines($conn, $today);
+send_overdue_notifications($conn, $today, true);
 
 $issues = $conn->query("SELECT ib.*, b.title FROM issued_books ib JOIN books b ON ib.accession_no = b.accession_no WHERE ib.return_date IS NULL ORDER BY ib.id DESC");
 ?>

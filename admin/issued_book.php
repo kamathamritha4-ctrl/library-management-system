@@ -141,9 +141,9 @@ $issues = $conn->query("SELECT ib.*, b.title FROM issued_books ib JOIN books b O
       <?php
       if ($issues && $issues->num_rows > 0) {
           while ($row = $issues->fetch_assoc()) {
-              $fineInfo = calculate_overdue_fine($conn, $row['due_date'], $today);
               $status = "<a href='?return_id={$row['id']}' class='link-btn' onclick=\"return confirm('Mark this book as returned?')\">Return</a>";
-              $fineText = $fineInfo['fine'] > 0 ? "<span class='tag-danger'>₹ {$fineInfo['fine']}</span>" : "₹ 0";
+              $fineValue = (int) ($row['fine'] ?? 0);
+              $fineText = $fineValue > 0 ? "<span class='tag-danger'>₹ {$fineValue}</span>" : "₹ 0";
               echo "<tr><td>{$row['accession_no']}</td><td>" . htmlspecialchars($row['title']) . "</td><td>{$row['issue_date']}</td><td>{$row['due_date']}</td><td>{$fineText}</td><td>{$status}</td></tr>";
           }
       } else {

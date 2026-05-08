@@ -54,8 +54,10 @@ if (isset($_POST['issue'])) {
             $book = $bookResult->fetch_assoc();
 
             if ((int) $book['quantity'] > 0) {
-                $insertStmt = $conn->prepare("INSERT INTO issued_books (user_id, accession_no, issue_date, due_date) VALUES (?, ?, ?, ?)");
-                $insertStmt->bind_param("iiss", $userId, $accessionNo, $issueDate, $dueDate);
+                $fineInfo = calculate_overdue_fine($conn, $dueDate, date('Y-m-d'));
+                $initialFine = (int) $fineInfo['fine'];
+                $insertStmt = $conn->prepare("INSERT INTO issued_books (user_id, accession_no, issue_date, due_date, fine) VALUES (?, ?, ?, ?, ?)");
+                $insertStmt->bind_param("iissi", $userId, $accessionNo, $issueDate, $dueDate, $initialFine);
 
                 if ($insertStmt->execute()) {
                     $updateStmt = $conn->prepare("UPDATE books SET quantity = quantity - 1 WHERE accession_no = ?");

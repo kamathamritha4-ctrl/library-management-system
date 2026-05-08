@@ -21,6 +21,7 @@ function ensure_overdue_notification_column(mysqli $conn): void
 function send_overdue_notifications(mysqli $conn, string $today, bool $onlyUnnotifiedToday = false): array
 {
     $mailCount = 0;
+    $failedSends = 0;
     $skippedNoEmail = 0;
     $skippedNotOverdue = 0;
     $skippedInvalidDates = 0;
@@ -86,17 +87,19 @@ function send_overdue_notifications(mysqli $conn, string $today, bool $onlyUnnot
         $headers .= "Content-type:text/html;charset=UTF-8\r\n";
         $headers .= "From: Library Admin <library-noreply@example.com>\r\n";
 
-        if (@mail($email, $subject, $htmlMessage, $headers)) {
+        if (mail($email, $subject, $htmlMessage, $headers)) {
             $mailCount++;
             if ($updateNotifyStmt) {
                 $issueId = (int) $row['id'];
                 $updateNotifyStmt->bind_param("i", $issueId);
                 $updateNotifyStmt->execute();
             }
+        } else {
+            $failedSends++;
         }
     }
 
-    return compact('mailCount', 'skippedNoEmail', 'skippedNotOverdue', 'skippedInvalidDates');
+    return compact('mailCount', 'failedSends', 'skippedNoEmail', 'skippedNotOverdue', 'skippedInvalidDates');
 }
 
 function sync_live_fines(mysqli $conn, string $asOfDate): void
@@ -160,7 +163,10 @@ if (isset($_POST['send_overdue_notifications'])) {
     $today = date('Y-m-d');
     ensure_overdue_notification_column($conn);
     $stats = send_overdue_notifications($conn, $today, false);
-    $success = "Overdue notification process completed. Emails sent: {$stats['mailCount']}, skipped (not overdue): {$stats['skippedNotOverdue']}, skipped (missing email): {$stats['skippedNoEmail']}, skipped (invalid issue/due dates): {$stats['skippedInvalidDates']}.";
+    $success = "Overdue notification process completed. Emails sent: {$stats['mailCount']}, failed to send: {$stats['failedSends']}, skipped (not overdue): {$stats['skippedNotOverdue']}, skipped (missing email): {$stats['skippedNoEmail']}, skipped (invalid issue/due dates): {$stats['skippedInvalidDates']}.";
+    if ($stats['failedSends'] > 0) {
+        $error = "Mail transport failed for {$stats['failedSends']} email(s). Configure SMTP/sendmail on the server to deliver emails.";
+    }
 }
 
 $today = date('Y-m-d');

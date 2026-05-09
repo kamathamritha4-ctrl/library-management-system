@@ -7,13 +7,19 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
 }
 
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-if ($id <= 0) {
+$accessionNoFromQuery = isset($_GET['accession_no']) ? (int) $_GET['accession_no'] : 0;
+
+if ($id > 0) {
+    $stmt = $conn->prepare("SELECT * FROM books WHERE id = ?");
+    $stmt->bind_param("i", $id);
+} elseif ($accessionNoFromQuery > 0) {
+    $stmt = $conn->prepare("SELECT * FROM books WHERE accession_no = ?");
+    $stmt->bind_param("i", $accessionNoFromQuery);
+} else {
     header("Location: manage_books.php");
     exit();
 }
 
-$stmt = $conn->prepare("SELECT * FROM books WHERE id = ?");
-$stmt->bind_param("i", $id);
 $stmt->execute();
 $result = $stmt->get_result();
 if ($result->num_rows !== 1) {
@@ -21,6 +27,7 @@ if ($result->num_rows !== 1) {
     exit();
 }
 $book = $result->fetch_assoc();
+$id = (int) $book['id'];
 $error = "";
 
 if (isset($_POST['update'])) {

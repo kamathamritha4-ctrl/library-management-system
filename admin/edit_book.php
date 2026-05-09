@@ -47,7 +47,7 @@ if (isset($_POST['update'])) {
         $error = "Accession number already used by another book.";
     } else {
         $update = $conn->prepare("UPDATE books SET date_of_accession=?, accession_no=?, category=?, author=?, title=?, publisher=?, year=?, price=?, total_copies=?, quantity=?, bill_no=?, bill_date=?, supplier=?, edition=?, remarks=? WHERE id=?");
-        $update->bind_param("sisssssdiiissssi", $dateOfAccession, $accessionNo, $subject, $author, $title, $publisher, $year, $price, $total, $quantity, $billNo, $billDate, $supplier, $edition, $remarks, $id);
+        $update->bind_param("sisssssdiisssssi", $dateOfAccession, $accessionNo, $subject, $author, $title, $publisher, $year, $price, $total, $quantity, $billNo, $billDate, $supplier, $edition, $remarks, $id);
         $update->execute();
         header("Location: manage_books.php");
         exit();

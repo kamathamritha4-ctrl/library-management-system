@@ -93,7 +93,7 @@ if ($search !== '') {
                                     <td>{$row['quantity']}</td>
                                     <td>{$row['date_of_accession']}</td>
                                     <td>
-                                        <a href='edit_book.php?id={$row['id']}' class='badge-btn badge-edit'>Edit</a>
+                                        <button type='button' class='badge-btn badge-edit' onclick=\"window.location.href='edit_book.php?id={$row['id']}'\">Edit</button>
                                         <a href='manage_books.php?delete={$row['id']}' class='badge-btn badge-delete' onclick=\"return confirm('Are you sure you want to delete this book?')\">Delete</a>
                                     </td>
                                 </tr>";

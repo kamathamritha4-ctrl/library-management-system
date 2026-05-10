@@ -9,9 +9,24 @@ if(!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
 if (isset($_GET['delete'])) {
     $id = (int) $_GET['delete'];
     if ($id > 0) {
-        $stmt = $conn->prepare("DELETE FROM books WHERE id = ? LIMIT 1");
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
+        $bookStmt = $conn->prepare("SELECT accession_no FROM books WHERE id = ? LIMIT 1");
+        $bookStmt->bind_param("i", $id);
+        $bookStmt->execute();
+        $book = $bookStmt->get_result()->fetch_assoc();
+
+        if ($book) {
+            $accessionNo = (int) $book['accession_no'];
+
+            $conn->begin_transaction();
+            $issueStmt = $conn->prepare("DELETE FROM issued_books WHERE accession_no = ?");
+            $issueStmt->bind_param("i", $accessionNo);
+            $issueStmt->execute();
+
+            $deleteStmt = $conn->prepare("DELETE FROM books WHERE id = ? AND accession_no = ? LIMIT 1");
+            $deleteStmt->bind_param("ii", $id, $accessionNo);
+            $deleteStmt->execute();
+            $conn->commit();
+        }
     }
     header("Location: manage_books.php");
     exit();

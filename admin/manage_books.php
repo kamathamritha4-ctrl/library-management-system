@@ -6,8 +6,8 @@ if(!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     exit();
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_book'])) {
-    $id = (int) $_POST['delete_book'];
+if (isset($_GET['delete'])) {
+    $id = (int) $_GET['delete'];
     if ($id > 0) {
         $stmt = $conn->prepare("DELETE FROM books WHERE id = ? LIMIT 1");
         $stmt->bind_param("i", $id);
@@ -107,7 +107,7 @@ if ($search !== '') {
                                     <td>{$dateOfAccession}</td>
                                     <td>
                                         <a href='edit_book.php?accession_no={$accessionNo}' class='badge-btn badge-edit'>Edit</a>
-                                        <button type='submit' name='delete_book' value='{$id}' class='badge-btn badge-delete' formaction='manage_books.php' formmethod='post' onclick=\"return confirm('Are you sure you want to delete this book?')\">Delete</button>
+                                        <a href='manage_books.php?delete={$id}' class='badge-btn badge-delete' onclick=\"return confirm('Are you sure you want to delete this book?')\">Delete</a>
                                     </td>
                                 </tr>";
                             }

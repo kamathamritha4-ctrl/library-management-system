@@ -10,6 +10,90 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
 $success = "";
 $error = "";
 
+function normalizeImportHeader($value) {
+    return preg_replace('/[^a-z0-9]/', '', strtolower(trim((string) $value)));
+}
+
+function importRowHasHeader($row) {
+    $headers = array_map('normalizeImportHeader', $row);
+    return in_array('accessionno', $headers, true)
+        || in_array('accessionnumber', $headers, true)
+        || in_array('dateofaccession', $headers, true)
+        || in_array('titlevolume', $headers, true);
+}
+
+function buildImportHeaderMap($row) {
+    $aliases = [
+        'date_of_accession' => ['dateofaccession', 'accessiondate', 'date'],
+        'accession_no' => ['accessionno', 'accessionnumber', 'accession'],
+        'subject' => ['subject', 'category'],
+        'author' => ['author'],
+        'title' => ['titlevolume', 'titleandvolume', 'title'],
+        'publisher' => ['publisher'],
+        'year' => ['year'],
+        'price' => ['pricers', 'price', 'priceinrs'],
+        'total' => ['total', 'totalcopies', 'copies'],
+        'quantity' => ['available', 'quantity', 'availablecopies'],
+        'bill_no' => ['billno', 'billnumber'],
+        'bill_date' => ['billdate'],
+        'supplier' => ['supplier'],
+        'edition' => ['edition'],
+        'remarks' => ['remarks', 'remark'],
+    ];
+
+    $map = [];
+    foreach ($row as $index => $header) {
+        $normalized = normalizeImportHeader($header);
+        foreach ($aliases as $field => $fieldAliases) {
+            if (in_array($normalized, $fieldAliases, true)) {
+                $map[$field] = $index;
+                break;
+            }
+        }
+    }
+
+    return $map;
+}
+
+function importValue($row, $map, $field, $fallbackIndex = null) {
+    $index = $map[$field] ?? $fallbackIndex;
+    return $index !== null ? ($row[$index] ?? null) : null;
+}
+
+function parseImportInt($value, $default = 0) {
+    if ($value === null || trim((string) $value) === '') return $default;
+    $clean = preg_replace('/[^0-9-]/', '', (string) $value);
+    return $clean === '' || $clean === '-' ? $default : (int) $clean;
+}
+
+function parseImportFloat($value, $default = 0) {
+    if ($value === null || trim((string) $value) === '') return $default;
+    $clean = preg_replace('/[^0-9.\-]/', '', (string) $value);
+    return $clean === '' || $clean === '-' ? $default : (float) $clean;
+}
+
+function importValueLooksLikeDate($value) {
+    $value = trim((string) $value);
+    return preg_match('/^\d{4}-\d{1,2}-\d{1,2}$/', $value)
+        || preg_match('/^\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}$/', $value)
+        || preg_match('/[a-zA-Z]/', $value);
+}
+
+function parseImportDate($value, $default = null) {
+    if ($value === null || trim((string) $value) === '') return $default ?: date('Y-m-d');
+
+    if (is_numeric($value) && class_exists('\PhpOffice\PhpSpreadsheet\Shared\Date')) {
+        try {
+            return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float) $value)->format('Y-m-d');
+        } catch (Throwable $e) {
+            // Fall through to strtotime for non-Excel numeric values.
+        }
+    }
+
+    $timestamp = strtotime((string) $value);
+    return $timestamp ? date('Y-m-d', $timestamp) : ($default ?: date('Y-m-d'));
+}
+
 if (isset($_POST['import']) && isset($_FILES['file']) && $_FILES['file']['error'] === 0) {
     try {
         $ext = strtolower(pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION));
@@ -29,40 +113,77 @@ if (isset($_POST['import']) && isset($_FILES['file']) && $_FILES['file']['error'
 
             require_once("../vendor/autoload.php");
             $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($_FILES['file']['tmp_name']);
-            $rows = $spreadsheet->getActiveSheet()->toArray();
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->rangeToArray('A1:' . $sheet->getHighestColumn() . $sheet->getHighestRow(), null, true, false, false);
         } else {
             throw new RuntimeException('Unsupported file format. Please upload CSV, XLSX, or XLS.');
         }
 
-        foreach ($rows as $index => $row) {
-            if ($index === 0) continue;
-            $accessionNo = (int) ($row[0] ?? 0);
-            if ($accessionNo <= 0) continue;
-            $dateOfAccession = !empty($row[1]) ? date('Y-m-d', strtotime((string) $row[1])) : date('Y-m-d');
-            $subject = trim((string) ($row[2] ?? ''));
-            $author = trim((string) ($row[3] ?? ''));
-            $title = trim((string) ($row[4] ?? ''));
-            $publisher = trim((string) ($row[5] ?? ''));
-            $year = !empty($row[6]) ? (int) $row[6] : null;
-            $price = isset($row[7]) ? (float) $row[7] : 0;
-            $total = isset($row[8]) ? (int) $row[8] : 1;
-            $billNo = trim((string) ($row[9] ?? ''));
-            $billDate = !empty($row[10]) ? date('Y-m-d', strtotime((string) $row[10])) : null;
-            $supplier = trim((string) ($row[11] ?? ''));
-            $edition = trim((string) ($row[12] ?? ''));
-            $remarks = trim((string) ($row[13] ?? ''));
+        $headerMap = [];
+        $startIndex = 0;
+        if (!empty($rows) && importRowHasHeader($rows[0])) {
+            $headerMap = buildImportHeaderMap($rows[0]);
+            $startIndex = 1;
+        }
+
+        $imported = 0;
+        $skipped = 0;
+        for ($index = $startIndex; $index < count($rows); $index++) {
+            $row = $rows[$index];
+            if (!array_filter($row, static fn ($value) => trim((string) $value) !== '')) {
+                continue;
+            }
+
+            $legacyOrder = empty($headerMap) && !importValueLooksLikeDate($row[0] ?? '');
+            $dateFallback = $legacyOrder ? 1 : 0;
+            $accessionFallback = $legacyOrder ? 0 : 1;
+
+            $accessionNo = parseImportInt(importValue($row, $headerMap, 'accession_no', $accessionFallback));
+            if ($accessionNo <= 0) {
+                $skipped++;
+                continue;
+            }
+
+            $dateOfAccession = parseImportDate(importValue($row, $headerMap, 'date_of_accession', $dateFallback));
+            $subject = trim((string) importValue($row, $headerMap, 'subject', 2));
+            $author = trim((string) importValue($row, $headerMap, 'author', 3));
+            $title = trim((string) importValue($row, $headerMap, 'title', 4));
+            $publisher = trim((string) importValue($row, $headerMap, 'publisher', 5));
+            $year = parseImportInt(importValue($row, $headerMap, 'year', 6), null);
+            $price = parseImportFloat(importValue($row, $headerMap, 'price', 7));
+            $total = max(1, parseImportInt(importValue($row, $headerMap, 'total', 8), 1));
+            $quantity = parseImportInt(importValue($row, $headerMap, 'quantity'), $total);
+            $quantity = max(0, min($quantity, $total));
+            $billNo = trim((string) importValue($row, $headerMap, 'bill_no', $legacyOrder ? 9 : null));
+            $billDateValue = importValue($row, $headerMap, 'bill_date', $legacyOrder ? 10 : null);
+            $billDate = $billDateValue !== null && trim((string) $billDateValue) !== '' ? parseImportDate($billDateValue, null) : null;
+            $supplier = trim((string) importValue($row, $headerMap, 'supplier', $legacyOrder ? 11 : 11));
+            $edition = trim((string) importValue($row, $headerMap, 'edition', $legacyOrder ? 12 : 10));
+            $remarks = trim((string) importValue($row, $headerMap, 'remarks', $legacyOrder ? 13 : 12));
+
+            if ($subject === '' || $author === '' || $title === '') {
+                $skipped++;
+                continue;
+            }
 
             $check = $conn->prepare("SELECT id FROM books WHERE accession_no = ?");
             $check->bind_param("i", $accessionNo);
             $check->execute();
-            if ($check->get_result()->num_rows > 0) continue;
+            if ($check->get_result()->num_rows > 0) {
+                $skipped++;
+                continue;
+            }
 
             $stmt = $conn->prepare("INSERT INTO books (date_of_accession, accession_no, category, author, title, publisher, year, price, total_copies, quantity, bill_no, bill_date, supplier, edition, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("sisssssdiiissss", $dateOfAccession, $accessionNo, $subject, $author, $title, $publisher, $year, $price, $total, $total, $billNo, $billDate, $supplier, $edition, $remarks);
-            $stmt->execute();
+            $stmt->bind_param("sisssssdiiissss", $dateOfAccession, $accessionNo, $subject, $author, $title, $publisher, $year, $price, $total, $quantity, $billNo, $billDate, $supplier, $edition, $remarks);
+            if ($stmt->execute()) {
+                $imported++;
+            } else {
+                $skipped++;
+            }
         }
 
-        $success = "Bulk import completed successfully.";
+        $success = "Bulk import completed successfully. Imported {$imported} book(s)." . ($skipped > 0 ? " Skipped {$skipped} duplicate or invalid row(s)." : "");
     } catch (Throwable $e) {
         $error = "Import failed: " . $e->getMessage();
     }

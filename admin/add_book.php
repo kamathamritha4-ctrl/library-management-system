@@ -355,7 +355,7 @@ if (isset($_POST['save'])) {
         <div class="form-group"><label>Accession Number</label><input type="number" name="accession_no" required></div>
       </div>
       <div class="row">
-        <div class="form-group"><label>Subject</label><input type="text" name="subject" required></div>
+        <div class="form-group"><label>Category</label><input type="text" name="subject" required></div>
         <div class="form-group"><label>Author</label><input type="text" name="author" required></div>
       </div>
       <div class="row">

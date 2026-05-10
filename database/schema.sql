@@ -11,9 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS books (
-  id INT AUTO_INCREMENT PRIMARY KEY,
   date_of_accession DATE NOT NULL,
-  accession_no INT NOT NULL UNIQUE,
+  accession_no INT NOT NULL PRIMARY KEY,
   category VARCHAR(120) NOT NULL,
   author VARCHAR(180) NOT NULL,
   title VARCHAR(255) NOT NULL,

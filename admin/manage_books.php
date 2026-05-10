@@ -6,27 +6,20 @@ if(!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     exit();
 }
 
-if (isset($_GET['delete'])) {
-    $id = (int) $_GET['delete'];
-    if ($id > 0) {
-        $bookStmt = $conn->prepare("SELECT accession_no FROM books WHERE id = ? LIMIT 1");
-        $bookStmt->bind_param("i", $id);
+if (isset($_GET['delete_accession'])) {
+    $accessionNo = (int) $_GET['delete_accession'];
+    if ($accessionNo > 0) {
+        $conn->begin_transaction();
+
+        $issueStmt = $conn->prepare("DELETE FROM issued_books WHERE accession_no = ?");
+        $issueStmt->bind_param("i", $accessionNo);
+        $issueStmt->execute();
+
+        $bookStmt = $conn->prepare("DELETE FROM books WHERE accession_no = ? LIMIT 1");
+        $bookStmt->bind_param("i", $accessionNo);
         $bookStmt->execute();
-        $book = $bookStmt->get_result()->fetch_assoc();
 
-        if ($book) {
-            $accessionNo = (int) $book['accession_no'];
-
-            $conn->begin_transaction();
-            $issueStmt = $conn->prepare("DELETE FROM issued_books WHERE accession_no = ?");
-            $issueStmt->bind_param("i", $accessionNo);
-            $issueStmt->execute();
-
-            $deleteStmt = $conn->prepare("DELETE FROM books WHERE id = ? AND accession_no = ? LIMIT 1");
-            $deleteStmt->bind_param("ii", $id, $accessionNo);
-            $deleteStmt->execute();
-            $conn->commit();
-        }
+        $conn->commit();
     }
     header("Location: manage_books.php");
     exit();
@@ -122,7 +115,7 @@ if ($search !== '') {
                                     <td>{$dateOfAccession}</td>
                                     <td>
                                         <a href='edit_book.php?accession_no={$accessionNo}' class='badge-btn badge-edit'>Edit</a>
-                                        <a href='manage_books.php?delete={$id}' class='badge-btn badge-delete' onclick=\"return confirm('Are you sure you want to delete this book?')\">Delete</a>
+                                        <a href='manage_books.php?delete_accession={$accessionNo}' class='badge-btn badge-delete' onclick=\"return confirm('Are you sure you want to delete this book?')\">Delete</a>
                                     </td>
                                 </tr>";
                             }

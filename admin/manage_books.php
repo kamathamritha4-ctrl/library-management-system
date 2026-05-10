@@ -28,12 +28,12 @@ if (isset($_GET['delete_accession'])) {
 $search = trim($_GET['q'] ?? '');
 if ($search !== '') {
     $like = "%{$search}%";
-    $stmt = $conn->prepare("SELECT * FROM books WHERE accession_no LIKE ? OR title LIKE ? OR author LIKE ? OR category LIKE ? OR publisher LIKE ? ORDER BY id");
+    $stmt = $conn->prepare("SELECT * FROM books WHERE accession_no LIKE ? OR title LIKE ? OR author LIKE ? OR category LIKE ? OR publisher LIKE ? ORDER BY accession_no");
     $stmt->bind_param("sssss", $like, $like, $like, $like, $like);
     $stmt->execute();
     $books = $stmt->get_result();
 } else {
-    $books = $conn->query("SELECT * FROM books ORDER BY id");
+    $books = $conn->query("SELECT * FROM books ORDER BY accession_no");
 }
 ?>
 <!DOCTYPE html>
@@ -90,7 +90,6 @@ if ($search !== '') {
                         <?php
                         if($books && $books->num_rows > 0) {
                             while($row = $books->fetch_assoc()) {
-                                $id = (int) $row['id'];
                                 $accessionNo = (int) $row['accession_no'];
                                 $title = htmlspecialchars($row['title'] ?? '', ENT_QUOTES, 'UTF-8');
                                 $author = htmlspecialchars($row['author'] ?? '', ENT_QUOTES, 'UTF-8');
@@ -102,7 +101,7 @@ if ($search !== '') {
                                 $quantity = (int) $row['quantity'];
                                 $dateOfAccession = htmlspecialchars($row['date_of_accession'] ?? '', ENT_QUOTES, 'UTF-8');
                                 echo "<tr>
-                                    <td><input type='checkbox' name='book_ids[]' value='{$id}'></td>
+                                    <td><input type='checkbox' name='book_accessions[]' value='{$accessionNo}'></td>
                                     <td>{$accessionNo}</td>
                                     <td>{$title}</td>
                                     <td>{$author}</td>
@@ -132,7 +131,7 @@ if ($search !== '') {
 </div>
 <script>
 document.getElementById("selectAll")?.addEventListener("change", function(){
-    document.querySelectorAll("input[name='book_ids[]']").forEach(cb => cb.checked = this.checked);
+    document.querySelectorAll("input[name='book_accessions[]']").forEach(cb => cb.checked = this.checked);
 });
 function toggleSidebar(){ document.getElementById("sidebar").classList.toggle("collapsed"); }
 </script>

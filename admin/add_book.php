@@ -94,6 +94,71 @@ function parseImportDate($value, $default = null) {
     return $timestamp ? date('Y-m-d', $timestamp) : ($default ?: date('Y-m-d'));
 }
 
+function getBookColumns($conn) {
+    $columns = [];
+    $result = $conn->query("SHOW COLUMNS FROM books");
+    if (!$result) {
+        throw new RuntimeException('Could not read books table columns: ' . $conn->error);
+    }
+
+    while ($row = $result->fetch_assoc()) {
+        $columns[$row['Field']] = true;
+    }
+
+    return $columns;
+}
+
+function bindStatementParams($stmt, $types, $values) {
+    $refs = [];
+    foreach ($values as $index => $value) {
+        $refs[$index] = &$values[$index];
+    }
+    array_unshift($refs, $types);
+    return call_user_func_array([$stmt, 'bind_param'], $refs);
+}
+
+function insertBookRecord($conn, $bookColumns, $bookData) {
+    $fields = [
+        'date_of_accession' => ['s', $bookData['date_of_accession']],
+        'accession_no' => ['i', $bookData['accession_no']],
+        'category' => ['s', $bookData['category']],
+        'author' => ['s', $bookData['author']],
+        'title' => ['s', $bookData['title']],
+        'publisher' => ['s', $bookData['publisher']],
+        'year' => ['i', $bookData['year']],
+        'price' => ['d', $bookData['price']],
+        'total_copies' => ['i', $bookData['total_copies']],
+        'quantity' => ['i', $bookData['quantity']],
+        'bill_no' => ['s', $bookData['bill_no']],
+        'bill_date' => ['s', $bookData['bill_date']],
+        'supplier' => ['s', $bookData['supplier']],
+        'edition' => ['s', $bookData['edition']],
+        'remarks' => ['s', $bookData['remarks']],
+    ];
+
+    $columns = [];
+    $placeholders = [];
+    $types = '';
+    $values = [];
+
+    foreach ($fields as $column => [$type, $value]) {
+        if (!isset($bookColumns[$column])) continue;
+        $columns[] = $column;
+        $placeholders[] = '?';
+        $types .= $type;
+        $values[] = $value;
+    }
+
+    $sql = 'INSERT INTO books (' . implode(', ', $columns) . ') VALUES (' . implode(', ', $placeholders) . ')';
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        throw new RuntimeException('Could not prepare book insert: ' . $conn->error);
+    }
+
+    bindStatementParams($stmt, $types, $values);
+    return $stmt->execute();
+}
+
 if (isset($_POST['import']) && isset($_FILES['file']) && $_FILES['file']['error'] === 0) {
     try {
         $ext = strtolower(pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION));
@@ -126,6 +191,7 @@ if (isset($_POST['import']) && isset($_FILES['file']) && $_FILES['file']['error'
             $startIndex = 1;
         }
 
+        $bookColumns = getBookColumns($conn);
         $imported = 0;
         $skipped = 0;
         for ($index = $startIndex; $index < count($rows); $index++) {
@@ -166,7 +232,10 @@ if (isset($_POST['import']) && isset($_FILES['file']) && $_FILES['file']['error'
                 continue;
             }
 
-            $check = $conn->prepare("SELECT id FROM books WHERE accession_no = ?");
+            $check = $conn->prepare("SELECT accession_no FROM books WHERE accession_no = ? LIMIT 1");
+            if (!$check) {
+                throw new RuntimeException('Could not prepare accession check: ' . $conn->error);
+            }
             $check->bind_param("i", $accessionNo);
             $check->execute();
             if ($check->get_result()->num_rows > 0) {
@@ -174,9 +243,25 @@ if (isset($_POST['import']) && isset($_FILES['file']) && $_FILES['file']['error'
                 continue;
             }
 
-            $stmt = $conn->prepare("INSERT INTO books (date_of_accession, accession_no, category, author, title, publisher, year, price, total_copies, quantity, bill_no, bill_date, supplier, edition, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("sisssssdiiissss", $dateOfAccession, $accessionNo, $subject, $author, $title, $publisher, $year, $price, $total, $quantity, $billNo, $billDate, $supplier, $edition, $remarks);
-            if ($stmt->execute()) {
+            $bookData = [
+                'date_of_accession' => $dateOfAccession,
+                'accession_no' => $accessionNo,
+                'category' => $subject,
+                'author' => $author,
+                'title' => $title,
+                'publisher' => $publisher,
+                'year' => $year,
+                'price' => $price,
+                'total_copies' => $total,
+                'quantity' => $quantity,
+                'bill_no' => $billNo,
+                'bill_date' => $billDate,
+                'supplier' => $supplier,
+                'edition' => $edition,
+                'remarks' => $remarks,
+            ];
+
+            if (insertBookRecord($conn, $bookColumns, $bookData)) {
                 $imported++;
             } else {
                 $skipped++;
@@ -205,15 +290,39 @@ if (isset($_POST['save'])) {
     $edition = trim($_POST['edition']);
     $remarks = trim($_POST['remarks']);
 
-    $check = $conn->prepare("SELECT id FROM books WHERE accession_no = ?");
-    $check->bind_param("i", $accessionNo);
-    $check->execute();
-    if ($check->get_result()->num_rows > 0) {
-        $error = "Accession number already exists.";
+    $check = $conn->prepare("SELECT accession_no FROM books WHERE accession_no = ? LIMIT 1");
+    if (!$check) {
+        $error = "Error: " . $conn->error;
     } else {
-        $stmt = $conn->prepare("INSERT INTO books (date_of_accession, accession_no, category, author, title, publisher, year, price, total_copies, quantity, bill_no, bill_date, supplier, edition, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("sisssssdiiissss", $dateOfAccession, $accessionNo, $subject, $author, $title, $publisher, $year, $price, $total, $total, $billNo, $billDate, $supplier, $edition, $remarks);
-        if ($stmt->execute()) $success = "Book added successfully."; else $error = "Error: " . $stmt->error;
+        $check->bind_param("i", $accessionNo);
+        $check->execute();
+        if ($check->get_result()->num_rows > 0) {
+            $error = "Accession number already exists.";
+        } else {
+            try {
+                $bookColumns = getBookColumns($conn);
+                $bookData = [
+                    'date_of_accession' => $dateOfAccession,
+                    'accession_no' => $accessionNo,
+                    'category' => $subject,
+                    'author' => $author,
+                    'title' => $title,
+                    'publisher' => $publisher,
+                    'year' => $year,
+                    'price' => $price,
+                    'total_copies' => $total,
+                    'quantity' => $total,
+                    'bill_no' => $billNo,
+                    'bill_date' => $billDate,
+                    'supplier' => $supplier,
+                    'edition' => $edition,
+                    'remarks' => $remarks,
+                ];
+                if (insertBookRecord($conn, $bookColumns, $bookData)) $success = "Book added successfully."; else $error = "Error: " . $conn->error;
+            } catch (Throwable $e) {
+                $error = "Error: " . $e->getMessage();
+            }
+        }
     }
 }
 ?>

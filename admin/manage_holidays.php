@@ -12,6 +12,7 @@ $success = '';
 $error = '';
 $search = trim($_GET['q'] ?? '');
 $editId = isset($_GET['edit']) ? (int) $_GET['edit'] : 0;
+$editDate = trim($_GET['edit_date'] ?? '');
 
 if (isset($_POST['add_holiday'])) {
     $holidayDate = $_POST['holiday_date'] ?? '';
@@ -70,12 +71,18 @@ if (isset($_POST['bulk_add']) && isset($_FILES['bulk_file']) && $_FILES['bulk_fi
 }
 
 if (isset($_POST['update_holiday'])) {
-    $id = (int) $_POST['holiday_id'];
+    $id = (int) ($_POST['holiday_id'] ?? 0);
+    $originalHolidayDate = $_POST['original_holiday_date'] ?? '';
     $holidayDate = $_POST['holiday_date'] ?? '';
     $description = trim($_POST['description'] ?? '');
 
-    $stmt = $conn->prepare("UPDATE holidays SET holiday_date = ?, description = ? WHERE id = ?");
-    $stmt->bind_param("ssi", $holidayDate, $description, $id);
+    if ($originalHolidayDate !== '') {
+        $stmt = $conn->prepare("UPDATE holidays SET holiday_date = ?, description = ? WHERE holiday_date = ?");
+        $stmt->bind_param("sss", $holidayDate, $description, $originalHolidayDate);
+    } else {
+        $stmt = $conn->prepare("UPDATE holidays SET holiday_date = ?, description = ? WHERE id = ?");
+        $stmt->bind_param("ssi", $holidayDate, $description, $id);
+    }
     $stmt->execute();
     $success = 'Holiday updated.';
     header("Location: manage_holidays.php?msg=updated");
@@ -95,7 +102,12 @@ if (isset($_GET['msg']) && $_GET['msg'] === 'updated') $success = 'Holiday updat
 if (isset($_GET['msg']) && $_GET['msg'] === 'deleted') $success = 'Holiday deleted.';
 
 $editHoliday = null;
-if ($editId > 0) {
+if ($editDate !== '') {
+    $stmt = $conn->prepare("SELECT * FROM holidays WHERE holiday_date = ?");
+    $stmt->bind_param("s", $editDate);
+    $stmt->execute();
+    $editHoliday = $stmt->get_result()->fetch_assoc();
+} elseif ($editId > 0) {
     $stmt = $conn->prepare("SELECT * FROM holidays WHERE id = ?");
     $stmt->bind_param("i", $editId);
     $stmt->execute();
@@ -136,6 +148,7 @@ if ($search !== '') {
     <h3 class="section-title"><?php echo $editHoliday ? 'Edit Holiday' : 'Add Holiday'; ?></h3>
     <form method="post" class="actions" style="margin-bottom:16px;">
       <input type="hidden" name="holiday_id" value="<?php echo (int)($editHoliday['id'] ?? 0); ?>">
+      <input type="hidden" name="original_holiday_date" value="<?php echo htmlspecialchars($editHoliday['holiday_date'] ?? ''); ?>">
       <input type="date" name="holiday_date" value="<?php echo htmlspecialchars($editHoliday['holiday_date'] ?? ''); ?>" required>
       <input type="text" name="description" placeholder="Holiday description" value="<?php echo htmlspecialchars($editHoliday['description'] ?? ''); ?>" required style="min-width:260px;">
       <?php if ($editHoliday): ?>
@@ -160,11 +173,12 @@ if ($search !== '') {
         <?php
         if($holidays && $holidays->num_rows>0){
             while($row=$holidays->fetch_assoc()){
+                $editDateLink = urlencode($row['holiday_date']);
                 echo "<tr>
                     <td>{$row['holiday_date']}</td>
                     <td>".htmlspecialchars($row['description'])."</td>
                     <td>
-                        <a class='badge-btn badge-edit' href='?edit={$row['id']}'>Edit</a>
+                        <a class='badge-btn badge-edit' href='?edit_date={$editDateLink}'>Edit</a>
                         <a class='badge-btn badge-delete' href='?delete={$row['id']}' onclick=\"return confirm('Delete this holiday?')\">Delete</a>
                     </td>
                 </tr>";

@@ -108,6 +108,17 @@ function getBookColumns($conn) {
     return $columns;
 }
 
+function bookAccessionExists($conn, $accessionNo) {
+    $check = $conn->prepare("SELECT 1 FROM books WHERE accession_no = ? LIMIT 1");
+    if (!$check) {
+        throw new RuntimeException('Could not prepare accession check: ' . $conn->error);
+    }
+
+    $check->bind_param("i", $accessionNo);
+    $check->execute();
+    return $check->get_result()->num_rows > 0;
+}
+
 function bindStatementParams($stmt, $types, $values) {
     $refs = [];
     foreach ($values as $index => $value) {
@@ -232,13 +243,7 @@ if (isset($_POST['import']) && isset($_FILES['file']) && $_FILES['file']['error'
                 continue;
             }
 
-            $check = $conn->prepare("SELECT accession_no FROM books WHERE accession_no = ? LIMIT 1");
-            if (!$check) {
-                throw new RuntimeException('Could not prepare accession check: ' . $conn->error);
-            }
-            $check->bind_param("i", $accessionNo);
-            $check->execute();
-            if ($check->get_result()->num_rows > 0) {
+            if (bookAccessionExists($conn, $accessionNo)) {
                 $skipped++;
                 continue;
             }
@@ -290,39 +295,32 @@ if (isset($_POST['save'])) {
     $edition = trim($_POST['edition']);
     $remarks = trim($_POST['remarks']);
 
-    $check = $conn->prepare("SELECT accession_no FROM books WHERE accession_no = ? LIMIT 1");
-    if (!$check) {
-        $error = "Error: " . $conn->error;
-    } else {
-        $check->bind_param("i", $accessionNo);
-        $check->execute();
-        if ($check->get_result()->num_rows > 0) {
+    try {
+        if (bookAccessionExists($conn, $accessionNo)) {
             $error = "Accession number already exists.";
         } else {
-            try {
-                $bookColumns = getBookColumns($conn);
-                $bookData = [
-                    'date_of_accession' => $dateOfAccession,
-                    'accession_no' => $accessionNo,
-                    'category' => $subject,
-                    'author' => $author,
-                    'title' => $title,
-                    'publisher' => $publisher,
-                    'year' => $year,
-                    'price' => $price,
-                    'total_copies' => $total,
-                    'quantity' => $total,
-                    'bill_no' => $billNo,
-                    'bill_date' => $billDate,
-                    'supplier' => $supplier,
-                    'edition' => $edition,
-                    'remarks' => $remarks,
-                ];
-                if (insertBookRecord($conn, $bookColumns, $bookData)) $success = "Book added successfully."; else $error = "Error: " . $conn->error;
-            } catch (Throwable $e) {
-                $error = "Error: " . $e->getMessage();
-            }
+            $bookColumns = getBookColumns($conn);
+            $bookData = [
+                'date_of_accession' => $dateOfAccession,
+                'accession_no' => $accessionNo,
+                'category' => $subject,
+                'author' => $author,
+                'title' => $title,
+                'publisher' => $publisher,
+                'year' => $year,
+                'price' => $price,
+                'total_copies' => $total,
+                'quantity' => $total,
+                'bill_no' => $billNo,
+                'bill_date' => $billDate,
+                'supplier' => $supplier,
+                'edition' => $edition,
+                'remarks' => $remarks,
+            ];
+            if (insertBookRecord($conn, $bookColumns, $bookData)) $success = "Book added successfully."; else $error = "Error: " . $conn->error;
         }
+    } catch (Throwable $e) {
+        $error = "Error: " . $e->getMessage();
     }
 }
 ?>

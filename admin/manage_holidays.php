@@ -12,6 +12,7 @@ $success = '';
 $error = '';
 $search = trim($_GET['q'] ?? '');
 $editId = isset($_GET['edit']) ? (int) $_GET['edit'] : 0;
+$editDate = trim($_GET['edit_date'] ?? '');
 
 if (isset($_POST['add_holiday'])) {
     $holidayDate = $_POST['holiday_date'] ?? '';
@@ -27,30 +28,61 @@ if (isset($_POST['add_holiday'])) {
 }
 
 if (isset($_POST['bulk_add']) && isset($_FILES['bulk_file']) && $_FILES['bulk_file']['error'] === 0) {
-    if (($handle = fopen($_FILES['bulk_file']['tmp_name'], 'r')) !== false) {
+    $ext = strtolower(pathinfo($_FILES['bulk_file']['name'], PATHINFO_EXTENSION));
+    $rows = [];
+
+    if ($ext === 'csv') {
+        if (($handle = fopen($_FILES['bulk_file']['tmp_name'], 'r')) !== false) {
+            while (($row = fgetcsv($handle)) !== false) {
+                $rows[] = $row;
+            }
+            fclose($handle);
+        }
+    } elseif (in_array($ext, ['xlsx', 'xls'], true)) {
+        if (PHP_VERSION_ID < 80200) {
+            $error = 'Excel import requires PHP 8.2+ in this setup. Please import CSV or upgrade PHP.';
+        } else {
+            require_once("../vendor/autoload.php");
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($_FILES['bulk_file']['tmp_name']);
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->rangeToArray('A1:' . $sheet->getHighestColumn() . $sheet->getHighestRow(), null, true, false, false);
+        }
+    } else {
+        $error = 'Unsupported file format. Please upload CSV, XLSX, or XLS.';
+    }
+
+    if (!$error) {
         $count = 0;
-        while (($row = fgetcsv($handle)) !== false) {
+        foreach ($rows as $row) {
             if (count($row) < 2) continue;
             $date = trim((string) $row[0]);
             $desc = trim((string) $row[1]);
+            if (is_numeric($row[0] ?? null) && class_exists('\PhpOffice\PhpSpreadsheet\Shared\Date')) {
+                $date = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float) $row[0])->format('Y-m-d');
+            }
             if (!$date || !$desc || strtolower($date) === 'date') continue;
             $stmt = $conn->prepare("INSERT IGNORE INTO holidays (holiday_date, description) VALUES (?, ?)");
             $stmt->bind_param("ss", $date, $desc);
             $stmt->execute();
             if ($stmt->affected_rows > 0) $count++;
         }
-        fclose($handle);
         $success = "Bulk upload complete. Added {$count} holidays.";
     }
 }
 
 if (isset($_POST['update_holiday'])) {
-    $id = (int) $_POST['holiday_id'];
+    $id = (int) ($_POST['holiday_id'] ?? 0);
+    $originalHolidayDate = $_POST['original_holiday_date'] ?? '';
     $holidayDate = $_POST['holiday_date'] ?? '';
     $description = trim($_POST['description'] ?? '');
 
-    $stmt = $conn->prepare("UPDATE holidays SET holiday_date = ?, description = ? WHERE id = ?");
-    $stmt->bind_param("ssi", $holidayDate, $description, $id);
+    if ($originalHolidayDate !== '') {
+        $stmt = $conn->prepare("UPDATE holidays SET holiday_date = ?, description = ? WHERE holiday_date = ?");
+        $stmt->bind_param("sss", $holidayDate, $description, $originalHolidayDate);
+    } else {
+        $stmt = $conn->prepare("UPDATE holidays SET holiday_date = ?, description = ? WHERE id = ?");
+        $stmt->bind_param("ssi", $holidayDate, $description, $id);
+    }
     $stmt->execute();
     $success = 'Holiday updated.';
     header("Location: manage_holidays.php?msg=updated");
@@ -70,7 +102,12 @@ if (isset($_GET['msg']) && $_GET['msg'] === 'updated') $success = 'Holiday updat
 if (isset($_GET['msg']) && $_GET['msg'] === 'deleted') $success = 'Holiday deleted.';
 
 $editHoliday = null;
-if ($editId > 0) {
+if ($editDate !== '') {
+    $stmt = $conn->prepare("SELECT * FROM holidays WHERE holiday_date = ?");
+    $stmt->bind_param("s", $editDate);
+    $stmt->execute();
+    $editHoliday = $stmt->get_result()->fetch_assoc();
+} elseif ($editId > 0) {
     $stmt = $conn->prepare("SELECT * FROM holidays WHERE id = ?");
     $stmt->bind_param("i", $editId);
     $stmt->execute();
@@ -111,6 +148,7 @@ if ($search !== '') {
     <h3 class="section-title"><?php echo $editHoliday ? 'Edit Holiday' : 'Add Holiday'; ?></h3>
     <form method="post" class="actions" style="margin-bottom:16px;">
       <input type="hidden" name="holiday_id" value="<?php echo (int)($editHoliday['id'] ?? 0); ?>">
+      <input type="hidden" name="original_holiday_date" value="<?php echo htmlspecialchars($editHoliday['holiday_date'] ?? ''); ?>">
       <input type="date" name="holiday_date" value="<?php echo htmlspecialchars($editHoliday['holiday_date'] ?? ''); ?>" required>
       <input type="text" name="description" placeholder="Holiday description" value="<?php echo htmlspecialchars($editHoliday['description'] ?? ''); ?>" required style="min-width:260px;">
       <?php if ($editHoliday): ?>
@@ -121,10 +159,10 @@ if ($search !== '') {
       <?php endif; ?>
     </form>
 
-    <h3 class="section-title">Bulk Add Holidays (CSV)</h3>
+    <h3 class="section-title">Bulk Add Holidays (Excel/CSV)</h3>
     <form method="post" enctype="multipart/form-data" class="actions" style="margin-bottom:16px;">
-      <input type="file" name="bulk_file" accept=".csv" required>
-      <button class="btn btn-navy" type="submit" name="bulk_add">Upload CSV</button>
+      <input type="file" name="bulk_file" accept=".csv,.xlsx,.xls" required>
+      <button class="btn btn-navy" type="submit" name="bulk_add">Upload</button>
       <small style="color:#667085;">Format: <code>YYYY-MM-DD,Description</code></small>
     </form>
 
@@ -135,11 +173,12 @@ if ($search !== '') {
         <?php
         if($holidays && $holidays->num_rows>0){
             while($row=$holidays->fetch_assoc()){
+                $editDateLink = urlencode($row['holiday_date']);
                 echo "<tr>
                     <td>{$row['holiday_date']}</td>
                     <td>".htmlspecialchars($row['description'])."</td>
                     <td>
-                        <a class='badge-btn badge-edit' href='?edit={$row['id']}'>Edit</a>
+                        <a class='badge-btn badge-edit' href='?edit_date={$editDateLink}'>Edit</a>
                         <a class='badge-btn badge-delete' href='?delete={$row['id']}' onclick=\"return confirm('Delete this holiday?')\">Delete</a>
                     </td>
                 </tr>";

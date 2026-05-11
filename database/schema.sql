@@ -43,7 +43,17 @@ CREATE TABLE IF NOT EXISTS issued_books (
 );
 
 CREATE TABLE IF NOT EXISTS holidays (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  holiday_date DATE NOT NULL UNIQUE,
+  holiday_date DATE NOT NULL PRIMARY KEY,
   description VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS question_bank (
+  file_key VARCHAR(80) PRIMARY KEY,
+  course VARCHAR(20) NOT NULL,
+  year_label VARCHAR(20) NOT NULL,
+  semester_label VARCHAR(20) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  original_name VARCHAR(255) NOT NULL,
+  stored_name VARCHAR(255) NOT NULL,
+  uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -6,12 +6,11 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
-$conn->query("CREATE TABLE IF NOT EXISTS holidays (id INT AUTO_INCREMENT PRIMARY KEY, holiday_date DATE NOT NULL UNIQUE, description VARCHAR(255) NOT NULL)");
+$conn->query("CREATE TABLE IF NOT EXISTS holidays (holiday_date DATE NOT NULL PRIMARY KEY, description VARCHAR(255) NOT NULL)");
 
 $success = '';
 $error = '';
 $search = trim($_GET['q'] ?? '');
-$editId = isset($_GET['edit']) ? (int) $_GET['edit'] : 0;
 $editDate = trim($_GET['edit_date'] ?? '');
 
 if (isset($_POST['add_holiday'])) {
@@ -71,28 +70,22 @@ if (isset($_POST['bulk_add']) && isset($_FILES['bulk_file']) && $_FILES['bulk_fi
 }
 
 if (isset($_POST['update_holiday'])) {
-    $id = (int) ($_POST['holiday_id'] ?? 0);
     $originalHolidayDate = $_POST['original_holiday_date'] ?? '';
     $holidayDate = $_POST['holiday_date'] ?? '';
     $description = trim($_POST['description'] ?? '');
 
-    if ($originalHolidayDate !== '') {
-        $stmt = $conn->prepare("UPDATE holidays SET holiday_date = ?, description = ? WHERE holiday_date = ?");
-        $stmt->bind_param("sss", $holidayDate, $description, $originalHolidayDate);
-    } else {
-        $stmt = $conn->prepare("UPDATE holidays SET holiday_date = ?, description = ? WHERE id = ?");
-        $stmt->bind_param("ssi", $holidayDate, $description, $id);
-    }
+    $stmt = $conn->prepare("UPDATE holidays SET holiday_date = ?, description = ? WHERE holiday_date = ?");
+    $stmt->bind_param("sss", $holidayDate, $description, $originalHolidayDate);
     $stmt->execute();
     $success = 'Holiday updated.';
     header("Location: manage_holidays.php?msg=updated");
     exit();
 }
 
-if (isset($_GET['delete'])) {
-    $id = (int) $_GET['delete'];
-    $stmt = $conn->prepare("DELETE FROM holidays WHERE id = ?");
-    $stmt->bind_param("i", $id);
+if (isset($_GET['delete_date'])) {
+    $deleteDate = trim($_GET['delete_date']);
+    $stmt = $conn->prepare("DELETE FROM holidays WHERE holiday_date = ?");
+    $stmt->bind_param("s", $deleteDate);
     $stmt->execute();
     header("Location: manage_holidays.php?msg=deleted");
     exit();
@@ -105,11 +98,6 @@ $editHoliday = null;
 if ($editDate !== '') {
     $stmt = $conn->prepare("SELECT * FROM holidays WHERE holiday_date = ?");
     $stmt->bind_param("s", $editDate);
-    $stmt->execute();
-    $editHoliday = $stmt->get_result()->fetch_assoc();
-} elseif ($editId > 0) {
-    $stmt = $conn->prepare("SELECT * FROM holidays WHERE id = ?");
-    $stmt->bind_param("i", $editId);
     $stmt->execute();
     $editHoliday = $stmt->get_result()->fetch_assoc();
 }
@@ -147,7 +135,6 @@ if ($search !== '') {
 
     <h3 class="section-title"><?php echo $editHoliday ? 'Edit Holiday' : 'Add Holiday'; ?></h3>
     <form method="post" class="actions" style="margin-bottom:16px;">
-      <input type="hidden" name="holiday_id" value="<?php echo (int)($editHoliday['id'] ?? 0); ?>">
       <input type="hidden" name="original_holiday_date" value="<?php echo htmlspecialchars($editHoliday['holiday_date'] ?? ''); ?>">
       <input type="date" name="holiday_date" value="<?php echo htmlspecialchars($editHoliday['holiday_date'] ?? ''); ?>" required>
       <input type="text" name="description" placeholder="Holiday description" value="<?php echo htmlspecialchars($editHoliday['description'] ?? ''); ?>" required style="min-width:260px;">
@@ -173,13 +160,13 @@ if ($search !== '') {
         <?php
         if($holidays && $holidays->num_rows>0){
             while($row=$holidays->fetch_assoc()){
-                $editDateLink = urlencode($row['holiday_date']);
+                $holidayDateLink = urlencode($row['holiday_date']);
                 echo "<tr>
                     <td>{$row['holiday_date']}</td>
                     <td>".htmlspecialchars($row['description'])."</td>
                     <td>
-                        <a class='badge-btn badge-edit' href='?edit_date={$editDateLink}'>Edit</a>
-                        <a class='badge-btn badge-delete' href='?delete={$row['id']}' onclick=\"return confirm('Delete this holiday?')\">Delete</a>
+                        <a class='badge-btn badge-edit' href='?edit_date={$holidayDateLink}'>Edit</a>
+                        <a class='badge-btn badge-delete' href='?delete_date={$holidayDateLink}' onclick=\"return confirm('Delete this holiday?')\">Delete</a>
                     </td>
                 </tr>";
             }

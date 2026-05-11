@@ -27,19 +27,44 @@ if (isset($_POST['add_holiday'])) {
 }
 
 if (isset($_POST['bulk_add']) && isset($_FILES['bulk_file']) && $_FILES['bulk_file']['error'] === 0) {
-    if (($handle = fopen($_FILES['bulk_file']['tmp_name'], 'r')) !== false) {
+    $ext = strtolower(pathinfo($_FILES['bulk_file']['name'], PATHINFO_EXTENSION));
+    $rows = [];
+
+    if ($ext === 'csv') {
+        if (($handle = fopen($_FILES['bulk_file']['tmp_name'], 'r')) !== false) {
+            while (($row = fgetcsv($handle)) !== false) {
+                $rows[] = $row;
+            }
+            fclose($handle);
+        }
+    } elseif (in_array($ext, ['xlsx', 'xls'], true)) {
+        if (PHP_VERSION_ID < 80200) {
+            $error = 'Excel import requires PHP 8.2+ in this setup. Please import CSV or upgrade PHP.';
+        } else {
+            require_once("../vendor/autoload.php");
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($_FILES['bulk_file']['tmp_name']);
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->rangeToArray('A1:' . $sheet->getHighestColumn() . $sheet->getHighestRow(), null, true, false, false);
+        }
+    } else {
+        $error = 'Unsupported file format. Please upload CSV, XLSX, or XLS.';
+    }
+
+    if (!$error) {
         $count = 0;
-        while (($row = fgetcsv($handle)) !== false) {
+        foreach ($rows as $row) {
             if (count($row) < 2) continue;
             $date = trim((string) $row[0]);
             $desc = trim((string) $row[1]);
+            if (is_numeric($row[0] ?? null) && class_exists('\PhpOffice\PhpSpreadsheet\Shared\Date')) {
+                $date = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float) $row[0])->format('Y-m-d');
+            }
             if (!$date || !$desc || strtolower($date) === 'date') continue;
             $stmt = $conn->prepare("INSERT IGNORE INTO holidays (holiday_date, description) VALUES (?, ?)");
             $stmt->bind_param("ss", $date, $desc);
             $stmt->execute();
             if ($stmt->affected_rows > 0) $count++;
         }
-        fclose($handle);
         $success = "Bulk upload complete. Added {$count} holidays.";
     }
 }
@@ -121,10 +146,10 @@ if ($search !== '') {
       <?php endif; ?>
     </form>
 
-    <h3 class="section-title">Bulk Add Holidays (CSV)</h3>
+    <h3 class="section-title">Bulk Add Holidays (Excel/CSV)</h3>
     <form method="post" enctype="multipart/form-data" class="actions" style="margin-bottom:16px;">
-      <input type="file" name="bulk_file" accept=".csv" required>
-      <button class="btn btn-navy" type="submit" name="bulk_add">Upload CSV</button>
+      <input type="file" name="bulk_file" accept=".csv,.xlsx,.xls" required>
+      <button class="btn btn-navy" type="submit" name="bulk_add">Upload</button>
       <small style="color:#667085;">Format: <code>YYYY-MM-DD,Description</code></small>
     </form>
 

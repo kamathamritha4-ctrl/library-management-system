@@ -1,29 +1,63 @@
 <?php
 include_once("../config/config.php");
 
+function has_column(mysqli $conn, string $table, string $column): bool {
+    $tableEsc = $conn->real_escape_string($table);
+    $columnEsc = $conn->real_escape_string($column);
+    $res = $conn->query("SHOW COLUMNS FROM `{$tableEsc}` LIKE '{$columnEsc}'");
+    return $res instanceof mysqli_result && $res->num_rows > 0;
+}
+
 if(!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     header("Location: ../index.php");
     exit();
 }
 
 if(isset($_GET['delete'])) {
+    $deleteCol = has_column($conn, 'books', 'id') ? 'id' : 'accession_no';
     $id = (int) $_GET['delete'];
-    $stmt = $conn->prepare("DELETE FROM books WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
+    $stmt = $conn->prepare("DELETE FROM books WHERE {$deleteCol} = ?");
+    if ($stmt) {
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+    }
     header("Location: manage_books.php");
     exit();
 }
 
 $search = trim($_GET['q'] ?? '');
+$orderCol = has_column($conn, 'books', 'id') ? 'id' : 'accession_no';
+$searchableColumns = [];
+foreach (['accession_no', 'title', 'author', 'category', 'publisher'] as $col) {
+    if (has_column($conn, 'books', $col)) {
+        $searchableColumns[] = $col;
+    }
+}
+
 if ($search !== '') {
     $like = "%{$search}%";
-    $stmt = $conn->prepare("SELECT * FROM books WHERE accession_no LIKE ? OR title LIKE ? OR author LIKE ? OR category LIKE ? OR publisher LIKE ? ORDER BY id");
-    $stmt->bind_param("sssss", $like, $like, $like, $like, $like);
-    $stmt->execute();
-    $books = $stmt->get_result();
+    if (!empty($searchableColumns)) {
+        $where = implode(' OR ', array_map(static fn($col) => "{$col} LIKE ?", $searchableColumns));
+        $sql = "SELECT * FROM books WHERE {$where} ORDER BY {$orderCol}";
+        $stmt = $conn->prepare($sql);
+        if ($stmt) {
+            $types = str_repeat('s', count($searchableColumns));
+            $values = array_fill(0, count($searchableColumns), $like);
+            $bindArgs = [$types];
+            foreach ($values as $k => $v) {
+                $bindArgs[] = &$values[$k];
+            }
+            call_user_func_array([$stmt, 'bind_param'], $bindArgs);
+            $stmt->execute();
+            $books = $stmt->get_result();
+        } else {
+            $books = $conn->query("SELECT * FROM books ORDER BY {$orderCol}");
+        }
+    } else {
+        $books = $conn->query("SELECT * FROM books ORDER BY {$orderCol}");
+    }
 } else {
-    $books = $conn->query("SELECT * FROM books ORDER BY id");
+    $books = $conn->query("SELECT * FROM books ORDER BY {$orderCol}");
 }
 ?>
 <!DOCTYPE html>
@@ -80,7 +114,7 @@ if ($search !== '') {
                         <?php
                         if($books && $books->num_rows > 0) {
                             while($row = $books->fetch_assoc()) {
-                                $bookId = (int) ($row['id'] ?? 0);
+                                $bookId = (int) ($row['id'] ?? ($row['accession_no'] ?? 0));
                                 $accessionNo = htmlspecialchars((string) ($row['accession_no'] ?? ''), ENT_QUOTES, 'UTF-8');
                                 $title = htmlspecialchars((string) ($row['title'] ?? ''), ENT_QUOTES, 'UTF-8');
                                 $author = htmlspecialchars((string) ($row['author'] ?? ''), ENT_QUOTES, 'UTF-8');

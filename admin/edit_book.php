@@ -1,6 +1,13 @@
 <?php
 include_once("../config/config.php");
 
+function has_column(mysqli $conn, string $table, string $column): bool {
+    $tableEsc = $conn->real_escape_string($table);
+    $columnEsc = $conn->real_escape_string($column);
+    $res = $conn->query("SHOW COLUMNS FROM `{$tableEsc}` LIKE '{$columnEsc}'");
+    return $res instanceof mysqli_result && $res->num_rows > 0;
+}
+
 if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     header("Location: ../index.php");
     exit();
@@ -12,7 +19,12 @@ if ($id <= 0) {
     exit();
 }
 
-$stmt = $conn->prepare("SELECT * FROM books WHERE id = ?");
+$keyColumn = has_column($conn, 'books', 'id') ? 'id' : 'accession_no';
+$stmt = $conn->prepare("SELECT * FROM books WHERE {$keyColumn} = ?");
+if (!$stmt) {
+    header("Location: manage_books.php");
+    exit();
+}
 $stmt->bind_param("i", $id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -40,17 +52,25 @@ if (isset($_POST['update'])) {
     $edition = trim($_POST['edition']);
     $remarks = trim($_POST['remarks']);
 
-    $dup = $conn->prepare("SELECT id FROM books WHERE accession_no = ? AND id <> ?");
-    $dup->bind_param("ii", $accessionNo, $id);
-    $dup->execute();
-    if ($dup->get_result()->num_rows > 0) {
-        $error = "Accession number already used by another book.";
+    $dup = $conn->prepare("SELECT {$keyColumn} FROM books WHERE accession_no = ? AND {$keyColumn} <> ?");
+    if (!$dup) {
+        $error = "Unable to validate accession number with current database structure.";
     } else {
-        $update = $conn->prepare("UPDATE books SET date_of_accession=?, accession_no=?, category=?, author=?, title=?, publisher=?, year=?, price=?, total_copies=?, quantity=?, bill_no=?, bill_date=?, supplier=?, edition=?, remarks=? WHERE id=?");
-        $update->bind_param("sisssssdiiissssi", $dateOfAccession, $accessionNo, $subject, $author, $title, $publisher, $year, $price, $total, $quantity, $billNo, $billDate, $supplier, $edition, $remarks, $id);
-        $update->execute();
-        header("Location: manage_books.php");
-        exit();
+        $dup->bind_param("ii", $accessionNo, $id);
+        $dup->execute();
+        if ($dup->get_result()->num_rows > 0) {
+            $error = "Accession number already used by another book.";
+        } else {
+            $update = $conn->prepare("UPDATE books SET date_of_accession=?, accession_no=?, category=?, author=?, title=?, publisher=?, year=?, price=?, total_copies=?, quantity=?, bill_no=?, bill_date=?, supplier=?, edition=?, remarks=? WHERE {$keyColumn}=?");
+            if (!$update) {
+                $error = "Unable to update book with current database structure.";
+            } else {
+                $update->bind_param("sisssssdiiissssi", $dateOfAccession, $accessionNo, $subject, $author, $title, $publisher, $year, $price, $total, $quantity, $billNo, $billDate, $supplier, $edition, $remarks, $id);
+                $update->execute();
+                header("Location: manage_books.php");
+                exit();
+            }
+        }
     }
 }
 ?>

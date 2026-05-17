@@ -66,6 +66,7 @@ if (isset($_POST['import']) && isset($_FILES['file']) && $_FILES['file']['error'
     } catch (Throwable $e) {
         $error = "Import failed: " . $e->getMessage();
     }
+}
 
 if (isset($_POST['save'])) {
     $dateOfAccession = $_POST['date_of_accession'] ?: date('Y-m-d');

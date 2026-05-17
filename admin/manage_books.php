@@ -80,21 +80,33 @@ if ($search !== '') {
                         <?php
                         if($books && $books->num_rows > 0) {
                             while($row = $books->fetch_assoc()) {
+                                $bookId = (int) ($row['id'] ?? 0);
+                                $accessionNo = htmlspecialchars((string) ($row['accession_no'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                $title = htmlspecialchars((string) ($row['title'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                $author = htmlspecialchars((string) ($row['author'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                $category = htmlspecialchars((string) ($row['category'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                $publisher = htmlspecialchars((string) ($row['publisher'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                $edition = htmlspecialchars((string) ($row['edition'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                $price = number_format((float) ($row['price'] ?? 0), 2);
+                                $totalCopies = (int) ($row['total_copies'] ?? 0);
+                                $quantity = (int) ($row['quantity'] ?? 0);
+                                $dateOfAccession = htmlspecialchars((string) ($row['date_of_accession'] ?? ''), ENT_QUOTES, 'UTF-8');
+
                                 echo "<tr>
-                                    <td><input type='checkbox' name='book_ids[]' value='{$row['id']}'></td>
-                                    <td>{$row['accession_no']}</td>
-                                    <td>{$row['title']}</td>
-                                    <td>{$row['author']}</td>
-                                    <td>{$row['category']}</td>
-                                    <td>{$row['publisher']}</td>
-                                    <td>{$row['edition']}</td>
-                                    <td>₹ {$row['price']}</td>
-                                    <td>{$row['total_copies']}</td>
-                                    <td>{$row['quantity']}</td>
-                                    <td>{$row['date_of_accession']}</td>
+                                    <td><input type='checkbox' name='book_ids[]' value='{$bookId}'></td>
+                                    <td>{$accessionNo}</td>
+                                    <td>{$title}</td>
+                                    <td>{$author}</td>
+                                    <td>{$category}</td>
+                                    <td>{$publisher}</td>
+                                    <td>{$edition}</td>
+                                    <td>₹ {$price}</td>
+                                    <td>{$totalCopies}</td>
+                                    <td>{$quantity}</td>
+                                    <td>{$dateOfAccession}</td>
                                     <td>
-                                        <a href='edit_book.php?id={$row['id']}' class='badge-btn badge-edit'>Edit</a>
-                                        <a href='manage_books.php?delete={$row['id']}' class='badge-btn badge-delete' onclick=\"return confirm('Are you sure you want to delete this book?')\">Delete</a>
+                                        <a href='edit_book.php?id={$bookId}' class='badge-btn badge-edit'>Edit</a>
+                                        <a href='manage_books.php?delete={$bookId}' class='badge-btn badge-delete' onclick=\"return confirm('Are you sure you want to delete this book?')\">Delete</a>
                                     </td>
                                 </tr>";
                             }

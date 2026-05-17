@@ -6,21 +6,11 @@ if(!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     exit();
 }
 
-if (isset($_GET['delete_accession'])) {
-    $accessionNo = (int) $_GET['delete_accession'];
-    if ($accessionNo > 0) {
-        $conn->begin_transaction();
-
-        $issueStmt = $conn->prepare("DELETE FROM issued_books WHERE accession_no = ?");
-        $issueStmt->bind_param("i", $accessionNo);
-        $issueStmt->execute();
-
-        $bookStmt = $conn->prepare("DELETE FROM books WHERE accession_no = ? LIMIT 1");
-        $bookStmt->bind_param("i", $accessionNo);
-        $bookStmt->execute();
-
-        $conn->commit();
-    }
+if(isset($_GET['delete'])) {
+    $id = (int) $_GET['delete'];
+    $stmt = $conn->prepare("DELETE FROM books WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
     header("Location: manage_books.php");
     exit();
 }
@@ -28,12 +18,12 @@ if (isset($_GET['delete_accession'])) {
 $search = trim($_GET['q'] ?? '');
 if ($search !== '') {
     $like = "%{$search}%";
-    $stmt = $conn->prepare("SELECT * FROM books WHERE accession_no LIKE ? OR title LIKE ? OR author LIKE ? OR category LIKE ? OR publisher LIKE ? ORDER BY accession_no");
+    $stmt = $conn->prepare("SELECT * FROM books WHERE accession_no LIKE ? OR title LIKE ? OR author LIKE ? OR category LIKE ? OR publisher LIKE ? ORDER BY id");
     $stmt->bind_param("sssss", $like, $like, $like, $like, $like);
     $stmt->execute();
     $books = $stmt->get_result();
 } else {
-    $books = $conn->query("SELECT * FROM books ORDER BY accession_no");
+    $books = $conn->query("SELECT * FROM books ORDER BY id");
 }
 ?>
 <!DOCTYPE html>
@@ -90,31 +80,21 @@ if ($search !== '') {
                         <?php
                         if($books && $books->num_rows > 0) {
                             while($row = $books->fetch_assoc()) {
-                                $accessionNo = (int) $row['accession_no'];
-                                $title = htmlspecialchars($row['title'] ?? '', ENT_QUOTES, 'UTF-8');
-                                $author = htmlspecialchars($row['author'] ?? '', ENT_QUOTES, 'UTF-8');
-                                $category = htmlspecialchars($row['category'] ?? '', ENT_QUOTES, 'UTF-8');
-                                $publisher = htmlspecialchars($row['publisher'] ?? '', ENT_QUOTES, 'UTF-8');
-                                $edition = htmlspecialchars($row['edition'] ?? '', ENT_QUOTES, 'UTF-8');
-                                $price = htmlspecialchars($row['price'] ?? '', ENT_QUOTES, 'UTF-8');
-                                $totalCopies = (int) $row['total_copies'];
-                                $quantity = (int) $row['quantity'];
-                                $dateOfAccession = htmlspecialchars($row['date_of_accession'] ?? '', ENT_QUOTES, 'UTF-8');
                                 echo "<tr>
-                                    <td><input type='checkbox' name='book_accessions[]' value='{$accessionNo}'></td>
-                                    <td>{$accessionNo}</td>
-                                    <td>{$title}</td>
-                                    <td>{$author}</td>
-                                    <td>{$category}</td>
-                                    <td>{$publisher}</td>
-                                    <td>{$edition}</td>
-                                    <td>₹ {$price}</td>
-                                    <td>{$totalCopies}</td>
-                                    <td>{$quantity}</td>
-                                    <td>{$dateOfAccession}</td>
+                                    <td><input type='checkbox' name='book_ids[]' value='{$row['id']}'></td>
+                                    <td>{$row['accession_no']}</td>
+                                    <td>{$row['title']}</td>
+                                    <td>{$row['author']}</td>
+                                    <td>{$row['category']}</td>
+                                    <td>{$row['publisher']}</td>
+                                    <td>{$row['edition']}</td>
+                                    <td>₹ {$row['price']}</td>
+                                    <td>{$row['total_copies']}</td>
+                                    <td>{$row['quantity']}</td>
+                                    <td>{$row['date_of_accession']}</td>
                                     <td>
-                                        <a href='edit_book.php?accession_no={$accessionNo}' class='badge-btn badge-edit'>Edit</a>
-                                        <a href='manage_books.php?delete_accession={$accessionNo}' class='badge-btn badge-delete' onclick=\"return confirm('Are you sure you want to delete this book?')\">Delete</a>
+                                        <a href='edit_book.php?id={$row['id']}' class='badge-btn badge-edit'>Edit</a>
+                                        <a href='manage_books.php?delete={$row['id']}' class='badge-btn badge-delete' onclick=\"return confirm('Are you sure you want to delete this book?')\">Delete</a>
                                     </td>
                                 </tr>";
                             }
@@ -131,7 +111,7 @@ if ($search !== '') {
 </div>
 <script>
 document.getElementById("selectAll")?.addEventListener("change", function(){
-    document.querySelectorAll("input[name='book_accessions[]']").forEach(cb => cb.checked = this.checked);
+    document.querySelectorAll("input[name='book_ids[]']").forEach(cb => cb.checked = this.checked);
 });
 function toggleSidebar(){ document.getElementById("sidebar").classList.toggle("collapsed"); }
 </script>

@@ -31,7 +31,7 @@ if ($search !== '') {
 body{margin:0;font-family:'Poppins','Segoe UI',Arial,sans-serif;background:radial-gradient(circle at top right,#ffe9e1 0%,#f7ece8 35%,#f5f7fb 78%)}
 .overlay{min-height:100vh;background:rgba(20,29,48,.22);display:flex;flex-direction:column;align-items:center;padding:34px 16px;color:#fff}
 .header{width:min(1080px,95%);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
-.nav{display:flex;gap:10px;flex-wrap:wrap}.nav a,.logout{background:#1F2940;color:white;padding:9px 13px;border-radius:10px;text-decoration:none;font-weight:600}.nav a.active{background:linear-gradient(135deg,var(--primary),var(--primary2))}
+.logout{background:#1F2940;color:white;padding:9px 13px;border-radius:10px;text-decoration:none;font-weight:600}
 .search-box{background:rgba(255,255,255,.2);backdrop-filter:blur(9px);padding:18px;border-radius:14px;box-shadow:0 14px 30px rgba(0,0,0,.22);width:min(1080px,95%)}
 .search-row{display:flex;gap:10px;flex-wrap:wrap}
 .search-box input{padding:12px 14px;flex:1;min-width:220px;border:none;border-radius:10px;font-size:15px}
@@ -47,7 +47,7 @@ th,td{padding:12px;border-bottom:1px solid #edf2f7;text-align:left}th{background
 <div class="overlay">
     <div class="header">
         <div style="display:flex; align-items:center; gap:10px;"><img src="https://trishaedu.com/Trisha-Logo.png" alt="Trisha Logo" style="width:44px;height:44px;border-radius:10px;background:white;object-fit:contain;"><h2>📘 Trisha Student Library Search</h2></div>
-        <div class="nav"><a class="active" href="search.php">Book Search</a><a href="question_bank.php">Question Bank</a><a class="logout" href="../logout.php">Logout</a></div>
+        <a class="logout" href="../logout.php">Logout</a>
     </div>
 
     <div class="search-box">

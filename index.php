@@ -20,8 +20,9 @@ if (isset($_POST['login'])) {
             $stored = (string) ($row['password'] ?? '');
             $isMd5Match = hash_equals($stored, $md5Password);
             $isBcryptMatch = password_verify($rawPassword, $stored);
+            $isPlainMatch = hash_equals($stored, $rawPassword);
 
-            if ($isMd5Match || $isBcryptMatch) {
+            if ($isMd5Match || $isBcryptMatch || $isPlainMatch) {
                 $matchedUser = $row;
                 break;
             }

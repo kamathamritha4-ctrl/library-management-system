@@ -13,19 +13,15 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     exit();
 }
 
-$id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-if ($id <= 0) {
+$accessionNoFromQuery = isset($_GET['accession_no']) ? (int) $_GET['accession_no'] : 0;
+
+if ($accessionNoFromQuery <= 0) {
     header("Location: manage_books.php");
     exit();
 }
 
-$keyColumn = has_column($conn, 'books', 'id') ? 'id' : 'accession_no';
-$stmt = $conn->prepare("SELECT * FROM books WHERE {$keyColumn} = ?");
-if (!$stmt) {
-    header("Location: manage_books.php");
-    exit();
-}
-$stmt->bind_param("i", $id);
+$stmt = $conn->prepare("SELECT * FROM books WHERE accession_no = ?");
+$stmt->bind_param("i", $accessionNoFromQuery);
 $stmt->execute();
 $result = $stmt->get_result();
 if ($result->num_rows !== 1) {
@@ -33,6 +29,7 @@ if ($result->num_rows !== 1) {
     exit();
 }
 $book = $result->fetch_assoc();
+$originalAccessionNo = (int) $book['accession_no'];
 $error = "";
 
 if (isset($_POST['update'])) {
@@ -52,25 +49,37 @@ if (isset($_POST['update'])) {
     $edition = trim($_POST['edition']);
     $remarks = trim($_POST['remarks']);
 
-    $dup = $conn->prepare("SELECT {$keyColumn} FROM books WHERE accession_no = ? AND {$keyColumn} <> ?");
-    if (!$dup) {
-        $error = "Unable to validate accession number with current database structure.";
+    $dup = $conn->prepare("SELECT accession_no FROM books WHERE accession_no = ? AND accession_no <> ? LIMIT 1");
+    $dup->bind_param("ii", $accessionNo, $originalAccessionNo);
+    $dup->execute();
+    if ($dup->get_result()->num_rows > 0) {
+        $error = "Accession number already used by another book.";
     } else {
-        $dup->bind_param("ii", $accessionNo, $id);
-        $dup->execute();
-        if ($dup->get_result()->num_rows > 0) {
-            $error = "Accession number already used by another book.";
-        } else {
-            $update = $conn->prepare("UPDATE books SET date_of_accession=?, accession_no=?, category=?, author=?, title=?, publisher=?, year=?, price=?, total_copies=?, quantity=?, bill_no=?, bill_date=?, supplier=?, edition=?, remarks=? WHERE {$keyColumn}=?");
-            if (!$update) {
-                $error = "Unable to update book with current database structure.";
-            } else {
-                $update->bind_param("sisssssdiiissssi", $dateOfAccession, $accessionNo, $subject, $author, $title, $publisher, $year, $price, $total, $quantity, $billNo, $billDate, $supplier, $edition, $remarks, $id);
-                $update->execute();
-                header("Location: manage_books.php");
-                exit();
-            }
+        $conn->begin_transaction();
+        if ($accessionNo !== $originalAccessionNo) {
+            $conn->query("SET FOREIGN_KEY_CHECKS=0");
         }
+
+        $update = $conn->prepare("UPDATE books SET date_of_accession=?, accession_no=?, category=?, author=?, title=?, publisher=?, year=?, price=?, total_copies=?, quantity=?, bill_no=?, bill_date=?, supplier=?, edition=?, remarks=? WHERE accession_no=?");
+        $update->bind_param("sissssidiisssssi", $dateOfAccession, $accessionNo, $subject, $author, $title, $publisher, $year, $price, $total, $quantity, $billNo, $billDate, $supplier, $edition, $remarks, $originalAccessionNo);
+        $bookUpdated = $update->execute();
+
+        if ($bookUpdated && $accessionNo !== $originalAccessionNo) {
+            $issueUpdate = $conn->prepare("UPDATE issued_books SET accession_no = ? WHERE accession_no = ?");
+            $issueUpdate->bind_param("ii", $accessionNo, $originalAccessionNo);
+            $bookUpdated = $issueUpdate->execute();
+            $conn->query("SET FOREIGN_KEY_CHECKS=1");
+        }
+
+        if ($bookUpdated) {
+            $conn->commit();
+            header("Location: manage_books.php");
+            exit();
+        }
+
+        $conn->rollback();
+        $conn->query("SET FOREIGN_KEY_CHECKS=1");
+        $error = "Error updating book: " . $conn->error;
     }
 }
 ?>

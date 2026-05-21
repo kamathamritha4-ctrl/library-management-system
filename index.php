@@ -7,10 +7,10 @@ if (isset($_POST['login'])) {
     $username = trim($_POST['username'] ?? '');
     $rawPassword = $_POST['password'] ?? '';
     $md5Password = md5($rawPassword);
-    $role = $_POST['role'] ?? '';
+    $role = strtolower(trim($_POST['role'] ?? ''));
 
-    $stmt = $conn->prepare("SELECT * FROM users WHERE name = ? AND role = ?");
-    $stmt->bind_param("ss", $username, $role);
+    $stmt = $conn->prepare("SELECT * FROM users WHERE (name = ? OR email = ?) AND LOWER(role) = ?");
+    $stmt->bind_param("sss", $username, $username, $role);
     $stmt->execute();
     $result = $stmt->get_result();
 

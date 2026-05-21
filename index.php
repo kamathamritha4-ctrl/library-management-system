@@ -7,21 +7,27 @@ if (isset($_POST['login'])) {
     $username = trim($_POST['username'] ?? '');
     $rawPassword = $_POST['password'] ?? '';
     $md5Password = md5($rawPassword);
-    $role = $_POST['role'] ?? '';
+    $role = strtolower(trim($_POST['role'] ?? ''));
 
-    $stmt = $conn->prepare("SELECT * FROM users WHERE name = ? AND role = ?");
-    $stmt->bind_param("ss", $username, $role);
+    $stmt = $conn->prepare("SELECT * FROM users WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) OR LOWER(TRIM(email)) = LOWER(TRIM(?))");
+    $stmt->bind_param("ss", $username, $username);
     $stmt->execute();
     $result = $stmt->get_result();
 
     $matchedUser = null;
     if ($result && $result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
-            $stored = (string) ($row['password'] ?? '');
+            $storedRole = strtolower(trim((string) ($row['role'] ?? '')));
+            if ($storedRole !== $role) {
+                continue;
+            }
+
+            $stored = trim((string) ($row['password'] ?? ''));
             $isMd5Match = hash_equals($stored, $md5Password);
             $isBcryptMatch = password_verify($rawPassword, $stored);
+            $isPlainMatch = hash_equals($stored, $rawPassword);
 
-            if ($isMd5Match || $isBcryptMatch) {
+            if ($isMd5Match || $isBcryptMatch || $isPlainMatch) {
                 $matchedUser = $row;
                 break;
             }

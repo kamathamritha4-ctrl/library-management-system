@@ -5,8 +5,10 @@ $error = "";
 
 if (isset($_POST['login'])) {
     $username = trim($_POST['username'] ?? '');
-    $rawPassword = $_POST['password'] ?? '';
+    $rawPassword = (string) ($_POST['password'] ?? '');
+    $trimmedPassword = trim($rawPassword);
     $md5Password = md5($rawPassword);
+    $md5TrimmedPassword = md5($trimmedPassword);
     $role = strtolower(trim($_POST['role'] ?? ''));
 
     $stmt = $conn->prepare("SELECT * FROM users WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) OR LOWER(TRIM(email)) = LOWER(TRIM(?))");
@@ -23,9 +25,10 @@ if (isset($_POST['login'])) {
             }
 
             $stored = trim((string) ($row['password'] ?? ''));
-            $isMd5Match = hash_equals($stored, $md5Password);
-            $isBcryptMatch = password_verify($rawPassword, $stored);
-            $isPlainMatch = hash_equals($stored, $rawPassword);
+            $storedLower = strtolower($stored);
+            $isMd5Match = hash_equals($storedLower, strtolower($md5Password)) || hash_equals($storedLower, strtolower($md5TrimmedPassword));
+            $isBcryptMatch = password_verify($rawPassword, $stored) || password_verify($trimmedPassword, $stored);
+            $isPlainMatch = hash_equals($stored, $rawPassword) || hash_equals($stored, $trimmedPassword);
 
             if ($isMd5Match || $isBcryptMatch || $isPlainMatch) {
                 $matchedUser = $row;
@@ -50,7 +53,7 @@ if (isset($_POST['login'])) {
         exit();
     }
 
-    $error = "Invalid Credentials";
+$error = "Invalid Credentials";
 }
 ?>
 <!DOCTYPE html>

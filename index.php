@@ -9,7 +9,7 @@ if (isset($_POST['login'])) {
     $md5Password = md5($rawPassword);
     $role = $_POST['role'] ?? '';
 
-    $stmt = $conn->prepare("SELECT * FROM users WHERE name = ? AND role = ?");
+    $stmt = $conn->prepare("SELECT * FROM users WHERE name = ? AND LOWER(role) = LOWER(?)");
     $stmt->bind_param("ss", $username, $role);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -34,9 +34,10 @@ if (isset($_POST['login'])) {
         $_SESSION['role'] = $matchedUser['role'];
         $_SESSION['name'] = $matchedUser['name'];
 
-        if ($role === 'admin') {
+        $matchedRole = strtolower((string) $matchedUser['role']);
+        if ($matchedRole === 'admin') {
             header("Location: admin/dashboard.php");
-        } elseif ($role === 'faculty') {
+        } elseif ($matchedRole === 'faculty') {
             header("Location: faculty/search.php");
         } else {
             header("Location: student/search.php");

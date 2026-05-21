@@ -39,9 +39,10 @@ if (isset($_POST['login'])) {
         $_SESSION['role'] = $matchedUser['role'];
         $_SESSION['name'] = $matchedUser['name'];
 
-        if ($role === 'admin') {
+        $matchedRole = strtolower((string) $matchedUser['role']);
+        if ($matchedRole === 'admin') {
             header("Location: admin/dashboard.php");
-        } elseif ($role === 'faculty') {
+        } elseif ($matchedRole === 'faculty') {
             header("Location: faculty/search.php");
         } else {
             header("Location: student/search.php");

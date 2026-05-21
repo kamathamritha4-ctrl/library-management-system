@@ -1,6 +1,13 @@
 <?php
 include_once("../config/config.php");
 
+function has_column(mysqli $conn, string $table, string $column): bool {
+    $tableEsc = $conn->real_escape_string($table);
+    $columnEsc = $conn->real_escape_string($column);
+    $res = $conn->query("SHOW COLUMNS FROM `{$tableEsc}` LIKE '{$columnEsc}'");
+    return $res instanceof mysqli_result && $res->num_rows > 0;
+}
+
 if(!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     header("Location: ../index.php");
     exit();
@@ -26,6 +33,14 @@ if (isset($_GET['delete_accession'])) {
 }
 
 $search = trim($_GET['q'] ?? '');
+$orderCol = has_column($conn, 'books', 'id') ? 'id' : 'accession_no';
+$searchableColumns = [];
+foreach (['accession_no', 'title', 'author', 'category', 'publisher'] as $col) {
+    if (has_column($conn, 'books', $col)) {
+        $searchableColumns[] = $col;
+    }
+}
+
 if ($search !== '') {
     $like = "%{$search}%";
     $stmt = $conn->prepare("SELECT * FROM books WHERE accession_no LIKE ? OR title LIKE ? OR author LIKE ? OR category LIKE ? OR publisher LIKE ? ORDER BY accession_no");
